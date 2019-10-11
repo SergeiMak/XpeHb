@@ -170,16 +170,16 @@ def main():
 
     grain, fertilizer, fish, whool, fabric, iron = gds.existing_goods()     # назначаем производимые товары
 
-    po.Pops(stl.Settlement.slovar['Zernochujsk'], 100, serf, 1, 100, 1)      # назначаем попы - pop - экземпляр "единицы" населения
-    po.Pops(stl.Settlement.slovar['Govnovodsk'],100,serf,1,100,1)           #serf1 = worker1 = serf2 = worker2 =
+    po.Pops(stl.Settlement.slovar['Zernochujsk'], 100, serf, 1, 100,1)      # назначаем попы - pop - экземпляр "единицы" населения
+    po.Pops(stl.Settlement.slovar['Govnovodsk'],100,serf,1,100,1)
     po.Pops(stl.Settlement.slovar['Pidrozhopsk'],100,serf,1,100,1)
     po.Pops(stl.Settlement.slovar['Muchosransk'], 100,serf, 1, 100, 1)
     po.Pops(stl.Settlement.slovar['Jobozadsk'], 100,serf,1, 100, 1)
     po.Pops(stl.Settlement.slovar['Gorojobsk'],100,worker,1,100,1)
-    fct.Factory(stl.Settlement.slovar['Zernochujsk'], serf, grain, 200, 1, 1000, 0, 1)     # назначаем заводы
-    fct.Factory(stl.Settlement.slovar['Govnovodsk'],serf,grain,200,1,1000,0,1)                      #fac1 = fertilfac1 = fac2 = fertilfac2 =
+    fct.Factory(stl.Settlement.slovar['Zernochujsk'], serf, grain, 200, 1, 1000, 0,True)     # назначаем заводы
+    fct.Factory(stl.Settlement.slovar['Govnovodsk'],serf,grain,200,1,1000,0,True)
     fct.Factory(stl.Settlement.slovar['Pidrozhopsk'], serf, fertilizer, 100, 1, 1000)
-    fct.Factory(stl.Settlement.slovar['Muchosransk'],serf,fish,200,1,1000,0,1)
+    fct.Factory(stl.Settlement.slovar['Muchosransk'],serf,fish,200,1,1000,0,True)
     fct.Factory(stl.Settlement.slovar['Jobozadsk'], serf, fertilizer, 100, 1, 1000)
     fct.Factory(stl.Settlement.slovar['Gorojobsk'],worker,iron,100,1,1000)
 
@@ -326,6 +326,8 @@ def main():
             weekpricechanging += 1
             for i in stl.Settlement.slovar:
                 for j in stl.Settlement.slovar[i].factories:
+                    if j.type:           # отдаю деньги и жратву крестьянам.
+                        fct.Factory.givefoodmoney(j)
                     if 1 in j.price_changed.values():
                         fct.Factory.pricechangeagain(j)
                     elif 2 in j.price_changed.values():
@@ -338,11 +340,12 @@ def main():
             """производство"""
             print('production')
             weekproduction += 1
-            print(grain.prices.values())
+            #print(grain.prices.values())
             for i in stl.Settlement.slovar:
                 for j in stl.Settlement.slovar[i].factories:
                     if stl.Settlement.slovar[i].factories[j].good.name == 'Grain':
-                        print('GRAIN',stl.Settlement.slovar[i].factories[j].sell, stl.Settlement.slovar[i].factories[j].money)
+                        #print('GRAIN',stl.Settlement.slovar[i].factories[j].sell, stl.Settlement.slovar[i].factories[j].money)
+                        print()
                     fct.Factory.create(stl.Settlement.slovar[i].factories[j])
 
 
@@ -439,7 +442,7 @@ def main():
             xg, yg = pos
 
 
-        pg.time.delay(5)
+        pg.time.delay(1)
         if not pause:
             xt += 1                                          # счётчик времени
 

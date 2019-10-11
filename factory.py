@@ -1,5 +1,6 @@
 """
 сделать коррекцию количества производства - а надо ли это делать? пускай по максимуму производят и удешевляют товар
+сделать бы ещё банковский сектор и кредитование. это так-то пиздец важно для капиталистической экономики 19-21 веков
 """
 
 import random
@@ -60,148 +61,6 @@ class Factory:
         for i in self.sell:
             self.price_changed[i] = 0
             print(i, self.price_changed[i])
-
-    def buying(self):
-        """
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        найдено: словарь с номерами 5 дешёвых заводов и с ценами там
-        надо сделать: определить порядок покупки
-        проверить суммарную достаточность наличия товаров
-            если не достаточно, то искать дальше, пока не будет достаточно
-                в этом случае скупить с дешёвых всё подчистую, а с добавленного докупить нехватку
-            если вообще мало соответствующих заводов, то покупать с <5
-                тогда вестимо всё подчистую
-        найти проценты и проверить отдельные достаточности
-            если в отдельных маловато, то нехватку купить у самого дешёвого (или распределить?)
-        если всё получилось - купить]
-
-
-        учесть отсутствие товаров у некоторых продавцов
-        учесть отсутствие товаров в целом
-        для этого можно в начале посчитать сумму мировых запасов и если на этой итерации они кончились,
-        то не продолжать покупки
-
-        потом учесть эмбарго и подобное
-
-        учесть нерентабельность покупки и неполноту производства - соответственно неполноту оплаты трудящимся
-        а после нескольких циклов неоплаты они уходят, а лучше посчитать, сколько раз в году им не заплатили
-        и если больше N, то попы уходят с завода
-        :return:
-        """
-        for key in self.usage:
-            cnt = 0
-            pricedict = self.good.prices.copy()
-            buylist = []
-            flag1 = True
-            flag2 = True
-            while flag1:
-                buylist.append(min(pricedict, key=pricedict.get))
-                pricedict.pop(buylist[cnt])
-                sum123 = 0
-                for i in range(len(buylist)):
-                    sum123 += Factory.slovar[buylist[i]].sell[key]
-                if sum123 < self.usage[key]*self.num_workers:
-                    cnt += 1
-                else:
-                    flag1 = False
-            minus123 = 0
-            for i in range(len(buylist)-1):
-                minus123 += Factory.slovar[buylist[i]].sell[key]
-                Factory.slovar[buylist[i]].sell[key] = 0
-                Factory.slovar[buylist[len(buylist)]].sell[key] -= self.usage[key]*self.num_workers - minus123 #сдвинуть надо эту хуйню на 1 таб назад
-
-
-
-
-
-
-
-                while flag2:
-                    minimal123 = min(pricedict, key=pricedict.get)
-                    for k, v in pricedict.items():
-                        if v == minimal123:
-                            buylist[k] = minimal123
-                            pricedict.pop(k)
-                            cnt += 1
-                sum123 = 0
-                for key1 in buylist:
-                    sum123 += Factory.slovar[key1].sell[key]
-                if sum123 >= self.usage[key]*self.num_workers:
-                    sumcube = 0
-                    for ab in buylist:
-                        sumcube += buylist[ab]**3
-                    for ab in buylist:
-                        self.buyingcoef[ab] = (buylist[ab]**3)/sumcube
-
-    def facbuy(self):
-        """
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        покупаем у самого дешёвого
-        если не хватает - у второго самого дешёвого и так далее
-        :return:
-        """
-        for key in self.usage:
-            cnt = 0
-            pricedict = self.good.prices.copy()
-            buylist = {}
-            flag1 = True
-            while flag1:
-                while cnt <5:
-                    minimal123 = min(pricedict.values())
-                    for k, v in pricedict.items():
-                        if v == minimal123:
-                            buylist[k] = minimal123
-                            pricedict.pop(k)
-                sum123 = 0
-                for key1 in buylist:
-                    sum123 += Factory.slovar[key1].sell[key]
-                if sum123 >= self.usage[key]*self.num_workers:
-                    sumcube = 0
-                    for ab in buylist:
-                        sumcube += buylist[ab]**3
-                    for ab in buylist:
-                        self.buyingcoef[ab] = (buylist[ab]**3)/sumcube
-
-    def prodtoserf(self):
-        """
-               УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-               УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-               УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-               УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-               УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-               УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET"""
-        for i in self.sell:
-            self.workers.inventory[i] += 1
-
-    def serf_winter(self):
-        """
-                       УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-                       УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-                       УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-                       УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-                       УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-                       УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET"""
-        if 'Serf' in self.location.pops:
-            sumoffood = 0
-            for i in self.location.pops['Serf'].cons:
-                sumoffood += self.location.pops['Serf'].inventory[i]
-            print('Serf_Food, ', self.location.name ,sumoffood)
-            if sumoffood < 300:
-                for i in self.location.pops['Serf'].cons:
-                    if i in self.sell:
-                        self.location.pops['Serf'].inventory[i] += self.sell[i]
-                        self.sell[i] = 0
-            print(self.location.pops['Serf'].inventory, ', inventory of serfs in', self.location.name)
 
     def types(self):
         """
@@ -306,7 +165,7 @@ class Factory:
                             self.sell[key1] += whatisdone[key1]
                     self.workers.money += self.money
                     self.money -= self.money
-        else:
+        elif not self.type:
             if self.money >= self.workers.num * self.gehalt:
                 self.money -= self.workers.num * self.gehalt
                 self.workers.money += self.workers.num * self.gehalt
@@ -336,6 +195,19 @@ class Factory:
                         print('<0 22')
                     self.workers.money += self.money
                     self.money -= self.money
+
+        elif self.type:                 # это для крестьян. чтоб при отсутсутствии денег у завода, всё равно бы продолжалось производство зерна, ибо зерно крестьяне, а не завод делают
+            for key in self.sell:
+                whatisdone[key] = self.workers.num * self.effectiveness[key] * (1 + self.bonuses[key])
+            for key in self.booster:
+                if self.booster[key] >= self.workers.num * self.boosterusage[key]:
+                    self.booster[key] -= self.workers.num * self.boosterusage[key]
+                    for key1 in self.sell:
+                        whatisdone[key1] *= self.boosterbonus[key]
+            for key1 in self.sell:
+                self.sell[key1] += whatisdone[key1]
+            if self.money < 0:
+                print('<0 11')
         self.after_creation = self.sell.copy()
         if self.money < 0:
             print('<0 CREATE')
@@ -344,6 +216,18 @@ class Factory:
         """покупка необходимых ресурсов для производства
 
         погляди этот же процесс описан для попов - popbuy
+
+        ПЛАНЫ
+        учесть отсутствие товаров у некоторых продавцов
+        учесть отсутствие товаров в целом
+        для этого можно в начале посчитать сумму мировых запасов и если на этой итерации они кончились,
+        то не продолжать покупки
+
+        потом учесть эмбарго и подобное
+
+        учесть нерентабельность покупки и неполноту производства - соответственно неполноту оплаты трудящимся
+        а после нескольких циклов неоплаты они уходят, а лучше посчитать, сколько раз в году им не заплатили
+        и если больше N, то попы уходят с завода
         """
         roadcoef = 0.1
         for i in self.buy:
@@ -354,7 +238,7 @@ class Factory:
                 pricedict[j] = pricedict[j] * (
                             1 + roadcoef * np.sqrt((j.location.area[0][0] - self.location.area[0][0]) ** 2 +
                                                    (j.location.area[0][1] - self.location.area[0][1]) ** 2))
-            print('Pricedict is ', pricedict)
+            #print('Pricedict is ', pricedict)
             flag1 = True
             if self.buy[i] < self.workers.num * self.usage[i] and self.money != 0:
                 while flag1:
@@ -492,3 +376,20 @@ class Factory:
                      self.price_changed[i] = 1
         for i in self.sell:
             self.soldprevious[i] = self.after_creation[i] - self.sell[i]
+
+    def givefoodmoney(self):
+        """
+        суть такова. в main-е после покупки всего и вся, во время смены цены мы отдаём крестьянам деньги и еду
+        в Main-e смотрим, завод ли это типа 1 (или типа True). если да то далее
+        прогоняем по всем вещам, что крестьяне потребляют
+        смотрим, есть ли у них достаточно еды, если достаточно, то хрен с ними
+        :return:
+        """
+        self.workers.money += self.money
+        self.money = 0
+        for key in self.workers.cons:
+            if key in self.sell.keys():
+                if self.workers.inventory[key] < self.workers.cons[key] * self.workers.total_num*1.5:# 1.5 - это просто на всякий случай коэффициент. если дети родятся, то чтоб не голодали
+                    difference = self.workers.cons[key] * self.workers.total_num*1.5 - self.workers.inventory[key]
+                    self.workers.inventory[key] = self.workers.cons[key] * self.workers.total_num*1.5
+                    self.sell[key] -= difference
