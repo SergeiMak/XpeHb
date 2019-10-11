@@ -2,44 +2,27 @@ import numpy as np
 import pygame as pg
 from random import randint
 
+# Необходимо описать что за параметры функций, чтобы было понятно, что происходит 
+# Нужны нормально комментарии к коду
 
 def risov(xe,xg,ye,yg,pribl,Dlina,mm,bg):
 
-    for i in range(-xe + xg - (Dlina // (2 * pribl)),
-                   -xe + xg + (Dlina // (2 * pribl))):
-        for j in range(-ye + yg - (Dlina // (2 * pribl)),
-                       -ye + yg + (Dlina // (2 * pribl))):
-
-            if mm[i, j] == 1:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0,100,0):
-                    pg.draw.rect(bg, (0, 100, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                               pribl, pribl))
-
-            elif mm[i, j] == 2:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (150, 150, 150):
-                    pg.draw.rect(bg, (150, 150, 150), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                                   (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                                   pribl, pribl))
-            elif mm[i, j] == 3:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (50, 50, 50):
-                    pg.draw.rect(bg, (50, 50, 50), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                                (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                                pribl, pribl))
-            elif mm[i, j] == 4:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0, 0, 0):
-                    pg.draw.rect(bg, (0, 0, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                             (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                             pribl, pribl))
-            elif mm[i, j] == 0:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0, 0, 150):
-                    pg.draw.rect(bg, (0, 0, 150), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
+    somerange = (Dlina // (2 * pribl))
+    for i in range(-xe + xg - somerange,
+                   -xe + xg + somerange):
+        for j in range(-ye + yg - somerange,
+                       -ye + yg + somerange):
+            swithcer ={0: (0,0,150), 
+                       1: (0,100,0), 
+                       2: (150,150,150),
+                       3: (50,50,50),
+                       4: (0,0,0),
+                       }
+            sw = swithcher[mu[i,j]]()
+            if bg.get_at(((i - (-xe + xg - somerange)) * pribl,
+                              (j - (-ye + yg - somerange)) * pribl)) != sw:
+                    pg.draw.rect(bg, sw, ((i - (-xe + xg - somerange)) * pribl,
+                                               (j - (-ye + yg - somerange)) * pribl,
                                                pribl, pribl))
 
 
@@ -51,7 +34,7 @@ def backspace(pribl,background,i):
             sur = background
 
 
-
+# Хуево, не должен там стаять сразу if , потому что нету return в случае, когда if не срабатывает
 def pribliz(i,xe,ye,Dlina,mm,pribl):
     if i.button == 3:
         xg, yg = i.pos[0], i.pos[1]
