@@ -1,6 +1,7 @@
 import numpy as np
 import pygame as pg
 import pops
+import random
 #import state
 
 
@@ -55,11 +56,26 @@ class Settlement:
         print('Number: {}. Name: {}'.format(self.number, self.name))
 
 
-    def growth(self, mm):
+    def city_growth(self, mm):
         """пока не сделано"""
         if self.population > 5000*self.size:
             self.size  += 1
-            mm[self.area] = 2               # max + or min -
+            newlands = []
+            for i in range(len(self.area)):
+                if mm[self.area[i][0]-1,self.area[i][1]] != 0 and mm[self.area[i][0]-1,self.area[i][1]] != 2:           # и надо будет позже ещё учесть горы и иные биомы
+                    newlands.append((self.area[i][0]-1,self.area[i][1]))
+                if mm[self.area[i][0]+1,self.area[i][1]] != 0 and mm[self.area[i][0]+1,self.area[i][1]] != 2:
+                    newlands.append((self.area[i][0]+1,self.area[i][1]))
+                if mm[self.area[i][0],self.area[i][1]-1] != 0 and mm[self.area[i][0],self.area[i][1]-1] != 2:
+                    newlands.append((self.area[i][0],self.area[i][1]-1))
+                if mm[self.area[i][0],self.area[i][1]+1] != 0 and mm[self.area[i][0],self.area[i][1]+1] != 2:
+                    newlands.append((self.area[i][0],self.area[i][1]+1))
+            randchoice = random.choice(newlands)
+            print('City growing, coordinates',randchoice)
+            mm[randchoice[0],randchoice[1]] = 2
+            self.area.append([randchoice[0],randchoice[1]])
+            """ОПОСЛЯ ЭТОГО НАДО ПРОВЕРИТЬ НАЛИЧИЕ ДРУГИХ ГОРОДОВ ПО СОСЕДСТВУ С 
+            НОВОЙ КЛЕТКОЙ И ЕСЛИ ТАКОЙ ГОРОД ЕСТЬ, ТО ИХ НУЖНО СОЕДИНИТь"""
 
 
 

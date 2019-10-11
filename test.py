@@ -364,6 +364,7 @@ def main():
                 for j in stl.Settlement.slovar[i].pops:
                     po.Pops.popchange(j)
                 stl.Settlement.stlpopul(stl.Settlement.slovar[i])
+                stl.Settlement.city_growth(stl.Settlement.slovar[i],mm)
 
         keys = pg.key.get_pressed()          # при нажатии на кнопку меняется координата исходного полотна - сдвиг карты
         if keys[pg.K_LEFT]:
