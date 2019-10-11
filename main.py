@@ -248,6 +248,7 @@ def main():
     weekbuying = 0
     weekpricechanging = 0
     weekcorrections = 0
+    monthmap = 0
     mapmode = 0
     pause = False
 
@@ -367,7 +368,10 @@ def main():
                 for j in stl.Settlement.slovar[i].pops:
                     po.Pops.popchange(j)
                 stl.Settlement.stlpopul(stl.Settlement.slovar[i])
-                stl.Settlement.city_growth(stl.Settlement.slovar[i],mm)
+                stl.Settlement.city_growth(stl.Settlement.slovar[i],mm,background)
+
+        #if xt//200 - monthmap > 0:
+
 
         keys = pg.key.get_pressed()          # при нажатии на кнопку меняется координата исходного полотна - сдвиг карты
         if keys[pg.K_LEFT]:

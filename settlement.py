@@ -56,7 +56,7 @@ class Settlement:
         print('Number: {}. Name: {}'.format(self.number, self.name))
 
 
-    def city_growth(self, mm):
+    def city_growth(self, mm, background):
         """пока не сделано"""
         if self.population > 5000*self.size:
             self.size  += 1
@@ -74,6 +74,7 @@ class Settlement:
             print('City growing, coordinates',randchoice)
             mm[randchoice[0],randchoice[1]] = 2
             self.area.append([randchoice[0],randchoice[1]])
+            background.set_at((randchoice[0],randchoice[1]), (150, 150, 150))
             """ОПОСЛЯ ЭТОГО НАДО ПРОВЕРИТЬ НАЛИЧИЕ ДРУГИХ ГОРОДОВ ПО СОСЕДСТВУ С 
             НОВОЙ КЛЕТКОЙ И ЕСЛИ ТАКОЙ ГОРОД ЕСТЬ, ТО ИХ НУЖНО СОЕДИНИТь"""
 
