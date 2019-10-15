@@ -8,12 +8,7 @@ class Culture:
         self.number = Culture.Cult_number
 
 
-def main():
+def exist_cult():
     pakistani = Culture('Pakistani')
     indian = Culture('Indian')
-
-
-
-
-if __name__ == "__main__":
-    main()
+    return pakistani,indian

@@ -18,4 +18,6 @@ class State:
         State.statenumberdict[self.number] = self
 
         State.statedict[self.name] = self
+        self.money = 0
+        self.inventory = {}
 

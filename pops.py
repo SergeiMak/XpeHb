@@ -1,27 +1,52 @@
+"""ПЛАНЫ: дошкольное образование (т.е. для детей) напрямую усиливает ассимиляцию
+        сделать тупо какую-нибудь аппроксимирующую функцию типа нормального распределения
+        сделать ограничение реализации каких-либо социальных институтов: они доступны если есть открытие или
+        у какой-нибудь страны это уже реализовано (надо тогда запрогать что-то типа "великого посольства")"""
 import goods
 import numpy as np
 
 class Pops:
+    """надо будет сделать (что, впрочем, не сильно сложно) преобразователь типов данных и везде  его повставлять
+            для того, чтоб меньше место занимали отдельные массивы и экземпляры. ибо их будет НУ ОЧЕНЬ БЛЯТЬ МНОГО
+            собственно
+            1. надо ввести периодическую проверку всех или некоторых списков (например численность
+                популяции) на отсутствие там чисел больше 255. если таких чисел нет, то преобразовать список
+                в dtype = np.uint8
+            2. надо ввести функцию, которая будет просматривать при добавлении значений к элементам таких списков,
+                больше ли итоговое значение чем 255. если да, то преобразовать список в dtype = np.uint16
+                ПРОБЛЕМА - а не дохуя ли станет вычислительной нагрузки?
 
 
-    def __init__(self, location, num, strata, dispers, money, unemployed, realnye = True):
+            Ввести показатель мигрантов. т.е. если каких-то чуваков ПОКА мало, то обращатся с ними как часть статистики
+            более крупной группы местных (чтоб для пары человек дохуя вещей не просчитывать и не хранить). потом, когда их станет приличное количество
+            то уже можно создать им отдельный поп
+
+            ПРОБЛЕМА многих попов - на каждом заводе будут свои мелкие подгруппы попов - слишком много вычислений
+            и много хранить данных          (с другой стороны, обычно на город не более 10 заводов. и то в очень крупных городах)
+            ПРОБЛЕМА одного общего попа - как рассчитывать тогда распределение благ? то есть например
+            одни рабочие производят микросхемы, а другие дилдаки. понятно, что микросхемщики должны быть богаты
+            а дилдаковщики должны сосать хуи
+    """
+
+
+    def __init__(self, location, male_age,female_age, strata,culture,religion, money, unemployed, realnye = True):
 
 
         self.location = location                     # прописька есть? пройдёмте, гражданин
         self.strata = strata
+        self.culture = culture
+        self.religion = religion
         #self.unemployment = unemployment
         self.unemployed = unemployed
         self.inventory = {'Grain': 0, 'Fish':0}          # что у попа есть
         self.cons = {'Grain': 1,'Fish':1}                    # что попу надо потреблять
-        self.male_age = np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10*num,0,0,0,0,0,0,0,0,
+        self.male_age = male_age
+        """np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,num/1,0,0,0,0,0,0,0,0,
                                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)               # сколько кого по возрастам мужиков
-        self.female_age = np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10*num,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)                   # баб
-        self.total_num = sum(self.male_age) + sum(self.female_age)                       # вестимо суммарно
+                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)"""               # сколько кого по возрастам мужиков
+        self.female_age = female_age                  # баб
 
-        self.dispers = dispers                               # хуйня пока не пригодилась
+        #self.dispers = dispers                               # хуйня пока не пригодилась
         self.money = money
         if realnye:                                  # для болванчиков не работает
             #location.population += self.num
@@ -29,8 +54,8 @@ class Pops:
             location.pops[self] = self                 # записываем в словарь экземпляра поселения, что в нём есть этот поп
             Pops.popchange(self)
         self.migrate = 0
-
-
+        self.hungry = 0
+        self.total_num = sum(self.male_age) + sum(self.female_age)                       # вестимо суммарно
 
 
     def popchange(self):
@@ -81,11 +106,23 @@ class Pops:
         koef_male = sum(self.male_age[15:])
         koef_female = sum(self.female_age[15:45])
         if koef_male <= koef_female:
-            self.male_age[0] = (koef_male * rozhdaemost) / 2
-            self.female_age[0] = self.male_age[0]
+            if koef_male > 100:
+                self.male_age[0] = (koef_male * rozhdaemost) / 2
+                self.female_age[0] = self.male_age[0]
+            else:
+                r1 = np.random.sample(koef_male)
+                r2 = sum(r1 < 0.2)   # тут надобно задать какую-нить функцию для сравнения, чтоб учесть сколько кто рожает (в зависимости от положения, образования, законов и так далее)
+                self.male_age[0] += r2/2    # пока забью хуй и поставлю 20% шанс в год - в среднем рожали 6 раз в жизнь - т.е. с 15 до 45 лет
+                self.female_age[0] += r2/2
         else:
-            self.male_age[0] = (koef_female * rozhdaemost) / 2
-            self.female_age[0] = self.male_age[0]
+            if koef_female > 100:
+                self.male_age[0] = (koef_female * rozhdaemost) / 2
+                self.female_age[0] = self.male_age[0]
+            else:
+                r1 = np.random.sample(koef_female)
+                r2 = sum(r1 < 0.2)   # тут надобно задать какую-нить функцию для сравнения, чтоб учесть сколько кто рожает (в зависимости от положения, образования, законов и так далее)
+                self.male_age[0] += r2/2    # пока забью хуй и поставлю 20% шанс в год - в среднем рожали 6 раз в жизнь - т.е. с 15 до 45 лет
+                self.female_age[0] += r2/2
         self.total_num = sum(self.male_age) + sum(self.female_age)
         """тут в зависимости от законов считаем, кто годится в рабочие"""
         if self.location.state.laws['Female_emans']:
@@ -99,89 +136,91 @@ class Pops:
             else:
                 self.num = sum(self.male_age[18:])
 
-
-    def popgrowth(self):
-        """
-        ЭТА ХУЙНЯ УЖЕ УСТАРЕЛА. ОПИСЫВАТЬ НЕ БУДУ
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        ПЛАНЫ: дошкольное образование (т.е. для детей) напрямую усиливает ассимиляцию
-        сделать тупо какую-нибудь аппроксимирующую функцию типа нормального распределения
-        сделать ограничение реализации каких-либо социальных институтов: они доступны если есть открытие или
-        у какой-нибудь страны это уже реализовано (надо тогда запрогать что-то типа "великого посольства")
-        :return:
-        """
-        male_smertnost_koef = 0.003
-        female_smertnost = 0.003                           # из вики по населению российской империи
-        child_smertnost_koef = 10                          # (1/(x+2)+(x/100-0.1)^4)/10
-        rozhdaemost = 0.2*self.strata.birth_rate           # 130 миллионов детей рождается ежегодно
-        for i in range(len(self.male_age)-1):               # 6 миллионов - детская смертность в 2012 году
-            self.male_age[74-i] += self.male_age[74-(i+1)]*(1-((1/((74-(i+1))+0.5))+((74-(i+1))/50-0.2)**5)/10)
-            self.female_age[74 - i] += self.female_age[74 - (i + 1)]*(1-((1/((74-(i+1))+0.5))+((74-(i+1))/50-0.2)**5)/10)
-            self.male_age[74 - (i + 1)] = 0
-            self.female_age[74 - (i + 1)] = 0
-        koef_male = sum(self.male_age[15:])
-        koef_female = sum(self.female_age[15:45])
-        if koef_male <= koef_female:
-            self.male_age[0] = (koef_male*rozhdaemost)/2
-            self.female_age[0] = self.male_age[0]
-        else:
-            self.male_age[0] = (koef_female*rozhdaemost)/2
-            self.female_age[0] = self.male_age[0]
-        self.total_num = sum(self.male_age) + sum(self.female_age)
-        if self.location.state.laws['Female_emans']:
-            if self.location.state.laws['Children_labour']:
-                self.num = sum(self.male_age[10:]) + sum(self.female_age[10:])
-            else:
-                self.num = sum(self.male_age[18:]) + sum(self.female_age[18:])
-        else:
-            if self.location.state.laws['Children_labour']:
-                self.num = sum(self.male_age[10:])
-            else:
-                self.num = sum(self.male_age[18:])
-
-
     def facsearch(self):
         """поиск работы"""
         for q in self.location.factories:
             if q.work_type == self.strata:          # подходит ли завод к распределяемому попу?
-                raznost = self.location.factories[q].fullnum - self.location.factories[q].workers.num             # сколько завод может принять рабочих
+                raznost = self.location.factories[q].fullnum - self.location.factories[q].num_workers             # сколько завод может принять рабочих
                 gotovo = self.num*self.location.factories[q].coef                 # сколько рабочих готово на НЕГО идти (в соответствии с коэффициентом)
                 """рассматриваем разные варианты: готов ли принять завод столько рабочих?
                 перемещаются в поп завода, кстати, рабочие прямо с детьми и жёнами"""
-                if raznost >= gotovo:
-                    for i in range(len(self.male_age)):
-                        self.location.factories[q].workers.male_age[i] += self.male_age[i] * \
-                                                                                               self.location.factories[
-                                                                                                   q].coef
-                        self.male_age[i] -= self.male_age[i] * \
-                                                                 self.location.factories[q].coef
-                        self.location.factories[q].workers.female_age[i] += self.female_age[i] * \
-                                                                                                 self.location.factories[
-                                                                                                     q].coef
-                        self.female_age[i] -= self.female_age[i] * self.location.factories[q].coef
-                    if self.num < 0:
-                        print('DEBAG!!! POP-FACSEARCH < 0')
+                shortname = self.location.factories[q].workers_dict
+                not_found = True
+                for key in shortname:
+                    if self.culture == key.culture and self.religion == key.religion and self.strata == key.strata:
+                        print('one same pop for factory found in ', self.location.name)
+                        if raznost >= gotovo:
+                            for i in range(len(self.male_age)):
+                                key.male_age[i] += self.male_age[i] * self.location.factories[
+                                                                                                           q].coef
+                                self.male_age[i] -= self.male_age[i] * self.location.factories[q].coef
+                                key.female_age[i] += self.female_age[i] *self.location.factories[
+                                                                                                             q].coef
+                                self.female_age[i] -= self.female_age[i] * self.location.factories[q].coef
+                            key.money += self.money*self.location.factories[
+                                                                                                             q].coef
+                            self.money -= self.money*self.location.factories[
+                                                                                                             q].coef
+                            if self.num < 0:
+                                print('DEBAG!!! POP-FACSEARCH < 0')
 
-                else:
-                    for i in range(len(self.male_age)):
-                        self.location.factories[q].workers.male_age[i] += self.male_age[i] * raznost/self.num
-                        self.male_age[i] -= self.male_age[i] * raznost/self.num
-                        self.location.factories[q].workers.female_age[i] += self.female_age[i] * raznost/self.num
-                        self.female_age[i] -= self.female_age[i] * raznost/self.num
-                    if self.num < 0:
-                        print('DEBAG!!! POP-FACSEARCH < 0')
+                        else:
+                            for i in range(len(self.male_age)):
+                                key.male_age[i] += self.male_age[i] * raznost/self.num
+                                self.male_age[i] -= self.male_age[i] * raznost/self.num
+                                key.female_age[i] += self.female_age[i] * raznost/self.num
+                                self.female_age[i] -= self.female_age[i] * raznost/self.num
+                            key.money += self.money*raznost/self.num
+                            self.money -= self.money*raznost/self.num
+                            if self.num < 0:
+                                print('DEBAG!!! POP-FACSEARCH < 0')
+                        not_found = False
+                if not_found:
+                    if raznost >= gotovo:
+                        m_age = np.array(
+                            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), dtype=np.uint16)
+                        f_age = np.array(
+                            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), dtype=np.uint16)
+                        for i in range(len(self.male_age)):
+                            #print('Males:', self.male_age[i],self.location.factories[q].coef)
+                            m_age[i] = self.male_age[i] * self.location.factories[q].coef
+                            self.male_age[i] -= self.male_age[i] * self.location.factories[q].coef
+                            f_age[i] = self.female_age[i] * self.location.factories[q].coef
+                            self.female_age[i] -= self.female_age[i] * self.location.factories[q].coef
 
+                        #print('male', m_age, 'female', f_age)
+                        new_money = self.money*self.location.factories[
+                                                                                                             q].coef
+                        self.money -= self.money*self.location.factories[
+                                                                                                             q].coef
 
-    def serfworkerdeath(self):
-        """
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        надо походу всё-таки на каждый завод, на каждый ресурс делать свой поп"
-        :return:
-        """
+                        self.location.factories[q].workers_dict[Pops(self.location,m_age.copy(),f_age.copy(),self.strata,self.culture,self.religion,new_money,0)] = self.location.factories[q].coef * self.num
+                    else:
+                        m_age = np.array(
+                            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), dtype=np.uint16)
+                        f_age = np.array(
+                            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), dtype=np.uint16)
+                        for i in range(len(self.male_age)):
+                            #print('Males raznost:', self.male_age[i], raznost, self.num)
+                            m_age[i] = self.male_age[i] * raznost/self.num
+                            self.male_age[i] -= self.male_age[i] * raznost/self.num
+                            f_age[i] = self.female_age[i] * raznost/self.num
+                            self.female_age[i] -= self.female_age[i] * raznost/self.num
+
+                        #print('male', m_age, 'female', f_age)
+                        new_money = self.money * raznost/self.num
+                        self.money -= self.money * raznost/self.num
+
+                        self.location.factories[q].workers_dict[Pops(self.location, m_age.copy(), f_age.copy(), self.strata, self.culture, self.religion, new_money,0)] = raznost
+
 
     def consume(self):
         """
@@ -208,8 +247,8 @@ class Pops:
                 quant123 += 1
             else:
                 fooddict.pop(i)                  # если чего-то нет, то мы удаляем это из скопированного словаря
-        if self.location.name == 'Govnovodsk':
-            print('ИНВЕНТАРЬ и ДЕНЬГИ Говноводчан', self.inventory, self.money)
+        if self.location.name == 'Pidrozhopsk':
+            print('ИНВЕНТАРЬ и ДЕНЬГИ Pidrozhopsk', self.inventory, self.money)
         if quant123 == 0:                        # если нихуя нет пожрать, то дохнут
             for q in range(len(self.male_age)):
                 self.male_age[q] *=0.95
@@ -223,8 +262,14 @@ class Pops:
                         if self.inventory[i] > 0:
                             eaten += self.inventory[i]/(self.total_num * self.cons[i])
                             self.inventory[i] = 0
-                            self.emigrate = min(self.migrate,1 - eaten)
-                            self.migrate = 1 - eaten
+                            self.emigrate = min(self.hungry,1 - eaten)          # если какая-то часть населения дважды не ела, то она частично сдохнет и частично уебёт
+                            if self.emigrate != 0:
+                                for q in range(len(self.male_age)):
+                                    self.male_age[q] -= self.emigrate*self.male_age[q]*0.05
+                                    self.female_age[q] -= self.emigrate*self.female_age[q]*0.05
+                                    self.emigrate * self.male_age[q] * 0.95
+                            self.hungry = 1 - eaten                             # но так-то можно сделать и трижды, и четырежды и т.д.
+
                             #Pops.migration(self)                               # тут тип если еда есть, но недостаточно
                                                                                 # тогда эмиграция или ещё что. пока не продумал до конца
 
@@ -245,26 +290,6 @@ class Pops:
         if qu123 == quant123:
             notfound123 = False
         return fooddict, quant123, notfound123
-
-    def serf_winter123(self):
-        """
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET УСТАРЕЛО OUTDATED VERALTET
-        короче типа заготовки на зиму крестьянам. прибирают себе излишки после вычитания налогов
-         если набрали жратвы на год, то остатки еды продают и на эти деньги покупают себе на год
-         то, что потребляют помимо еды. остаток денег служит для роскоши или соц лифта
-        :return:
-        """
-        if self.strata.name == 'Serf':
-            for i in self.strata.cons:
-                if i in self.location.factories:
-                    if self.location.factories[i].sell[i] >= self.num*self.strata.cons[i]:
-                        self.location.factories[i].sell[i] -= self.num * self.strata.cons[i]
-                        self.inventory[i] += self.num * self.strata.cons[i]
-                    else:
-                        self.inventory[i] += self.location.factories[i].sell[i]
-                        self.location.factories[i].sell[i] = 0
 
     def popbuy(self):
         """
@@ -324,12 +349,13 @@ class Pops:
                     if self.money == 0:
                         flag1 = False
 
-    def migration(self):
+    def leavework(self):
         """ещё нихуя нет))"""
         if self.emigrate > 0:
             print('Migration method')
 
-
+    #def leavework(self):
+        #if
 
 
 
@@ -351,6 +377,8 @@ class Pops:
 
         self.num = num
         self.culture = culture
+                self.religion = religion
+
         self.location = location
         self.strata = strata
         self.religion = religion

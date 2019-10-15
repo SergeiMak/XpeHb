@@ -8,12 +8,7 @@ class Religion:
         self.number = Religion.Rel_number
 
 
-def main():
+def exist_rel():
     jewish = Religion('Jewish')
     sunni = Religion('Sunni')
-
-
-
-
-if __name__ == "__main__":
-    main()
+    return jewish,sunni

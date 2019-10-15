@@ -8,7 +8,20 @@ import goods
 import pops
 import numpy as np
 
-
+"""
+Как переделать систему к многопопной системе?
+Переделать суммирование рабочей силы и распределение денег.
+Сделать систему создания/уничтожения попов
+        - после popchange заносить в общий словарь попы, население которых нулевое.
+        - а потом удалять их (или вовсе сразу)
+Сделать систему миграции.
+        - если уже есть такая же группа (по культуре, религии и месту жительства) то туда добавляем и пересчитываем
+            грамотность, агрессивность, сознательность и так далее.
+Сделать систему увольнения
+        - проверять, есть ли уже соответствующий поп или ещё нет
+Сделать изменение оплаты труда - по сути рынок труда.
+Сделать систему основания новых поселений при миграции.
+"""
 class Factory:
     Fact_number = 0
     slovar = dict()                          # словарь всех заводов. вот только нахуя?
@@ -16,8 +29,8 @@ class Factory:
     def __init__(self, location, work_type, good, money,gehalt,fullnum, num_workers = 0,type=0):
         self.location = location                         # где завод располагается, в каком городе
         self.work_type = work_type                               # чей труд применяется? крестьян? рабочих? учителей?
-        self.num_workers = num_workers                           # количество уже нанятых трудяг
-        self.workers = pops.Pops(location,0,work_type,1.0,0,0)               # создаём для этих трудяг отдельный поп
+
+        #self.workers = pops.Pops(location,0,work_type,1.0,0,0)               # создаём для этих трудяг отдельный поп
         self.good = good                             # по сути тип завода
         self.money = money                                  # деньги завода
         self.gehalt = gehalt                         #  зарплата трудящихся
@@ -39,6 +52,11 @@ class Factory:
         if self.good.name == 'Grain':                    # нужно для многих В БУДУЩЕМ вещей, которые сложно описать с помощью знака #. ныне бесполезно
             self.range = 10
 
+        self.workers_dict = {}
+        self.num_workers = 0
+        for key in self.workers_dict:
+            self.num_workers += key.num                           # количество уже нанятых трудяг
+
         Factory.types(self)                                  # метод заполняет для этого завода sell, buy, boost, usage и так далее. в зависимости от типа завода
         Factory.setgoodsforpricechange(self)                     # вспомогательная хрень для изменения цены. типа поставить, что они ни на что пока ещё не менялись
 
@@ -53,7 +71,6 @@ class Factory:
         Factory.Fact_number  += 1
         Factory.slovar[self.number] = self                   # записываем в общий словарь заводов
         good.prices[self] = self.startingprice                       # записываем в словарь продаваемого товара свою цену
-
 
     def setgoodsforpricechange(self):
         """вспомогательная хрень для изменения цены. типа поставить, что они ни на что пока ещё не менялись
@@ -87,7 +104,7 @@ class Factory:
 
         if self.good.name == 'Fertilizer':
             self.sell['Fertilizer'] = 0
-            self.effectiveness['Fertilizer'] = 1
+            self.effectiveness['Fertilizer'] = 10
             self.bonuses['Fertilizer'] = 0
             self.startingprice = 0.3
 
@@ -113,7 +130,7 @@ class Factory:
 
     def coef(self):
         """высчитываем коэффициент для распределения попов на работу"""
-        if self.fullnum == self.workers.num:
+        if self.fullnum == self.num_workers:
             self.coef = 0
             self.notfull = 0
             print('factory in ',self.location.name,' is FULL')
@@ -129,25 +146,29 @@ class Factory:
         а потом в соответствии с этими условиями тратится всё, что нужно/есть и производится товар. а деньги (зарплата) выплачиваются
         попу
         """
-
+        self.num_workers = 0
+        for key in self.workers_dict:
+            self.workers_dict[key] = key.num
+            self.num_workers += key.num
         whatisdone = {}
         if len(self.buy) != 0:
-            if self.money >= self.workers.num * self.gehalt:
+            if self.money >= self.num_workers * self.gehalt:
                 keysell = random.choice(list(self.buy.keys()))
-                if self.buy[keysell] >= self.workers.num * self.usage[keysell]:
+                if self.buy[keysell] >= self.num_workers * self.usage[keysell]:
                     for key in self.buy:
-                        self.buy[key] -= self.workers.num * self.usage[key]
+                        self.buy[key] -= self.num_workers * self.usage[key]
                     for key in self.sell:
-                        whatisdone[key] = self.workers.num * self.effectiveness[key] * (1 + self.bonuses[key])
+                        whatisdone[key] = self.num_workers * self.effectiveness[key] * (1 + self.bonuses[key])
                     for key in self.booster:
-                        if self.booster[key] >= self.workers.num * self.boosterusage[key]:
-                            self.booster[key] -= self.workers.num * self.boosterusage[key]
+                        if self.booster[key] >= self.num_workers * self.boosterusage[key]:
+                            self.booster[key] -= self.num_workers * self.boosterusage[key]
                             for key1 in self.sell:
                                 whatisdone[key1] *= self.boosterbonus[key]
                     for key1 in self.sell:
                         self.sell[key1] += whatisdone[key1]
-                self.money -= self.workers.num * self.gehalt
-                self.workers.money += self.workers.num * self.gehalt
+                self.money -= self.num_workers * self.gehalt
+                for j in self.workers_dict:
+                    j.money += j.num * self.gehalt
             else:
                 if self.money >0:
                     keysell = random.choice(list(self.buy.keys()))
@@ -163,17 +184,19 @@ class Factory:
                                     whatisdone[key1] *= self.boosterbonus[key]
                         for key1 in self.sell:
                             self.sell[key1] += whatisdone[key1]
-                    self.workers.money += self.money
+                    for j in self.workers_dict:
+                        j.money += self.money * j.num/self.num_workers
                     self.money -= self.money
         elif not self.type:
-            if self.money >= self.workers.num * self.gehalt:
-                self.money -= self.workers.num * self.gehalt
-                self.workers.money += self.workers.num * self.gehalt
+            if self.money >= self.num_workers * self.gehalt:
+                self.money -= self.num_workers * self.gehalt
+                for j in self.workers_dict:
+                    j.money += j.num * self.gehalt
                 for key in self.sell:
-                    whatisdone[key] = self.workers.num * self.effectiveness[key] * (1 + self.bonuses[key])
+                    whatisdone[key] = self.num_workers * self.effectiveness[key] * (1 + self.bonuses[key])
                 for key in self.booster:
-                    if self.booster[key] >= self.workers.num * self.boosterusage[key]:
-                        self.booster[key] -= self.workers.num * self.boosterusage[key]
+                    if self.booster[key] >= self.num_workers * self.boosterusage[key]:
+                        self.booster[key] -= self.num_workers * self.boosterusage[key]
                         for key1 in self.sell:
                             whatisdone[key1] *= self.boosterbonus[key]
                 for key1 in self.sell:
@@ -193,15 +216,16 @@ class Factory:
                         self.sell[key1] += whatisdone[key1]
                     if self.money < 0:
                         print('<0 22')
-                    self.workers.money += self.money
+                    for j in self.workers_dict:
+                        j.money += self.money * j.num / self.num_workers
                     self.money -= self.money
 
         elif self.type:                 # это для крестьян. чтоб при отсутсутствии денег у завода, всё равно бы продолжалось производство зерна, ибо зерно крестьяне, а не завод делают
             for key in self.sell:
-                whatisdone[key] = self.workers.num * self.effectiveness[key] * (1 + self.bonuses[key])
+                whatisdone[key] = self.num_workers * self.effectiveness[key] * (1 + self.bonuses[key])
             for key in self.booster:
-                if self.booster[key] >= self.workers.num * self.boosterusage[key]:
-                    self.booster[key] -= self.workers.num * self.boosterusage[key]
+                if self.booster[key] >= self.num_workers * self.boosterusage[key]:
+                    self.booster[key] -= self.num_workers * self.boosterusage[key]
                     for key1 in self.sell:
                         whatisdone[key1] *= self.boosterbonus[key]
             for key1 in self.sell:
@@ -240,15 +264,15 @@ class Factory:
                                                    (j.location.area[0][1] - self.location.area[0][1]) ** 2))
             #print('Pricedict is ', pricedict)
             flag1 = True
-            if self.buy[i] < self.workers.num * self.usage[i] and self.money != 0:
+            if self.buy[i] < self.num_workers * self.usage[i] and self.money != 0:
                 while flag1:
                     minpr = min(pricedict, key=pricedict.get)
-                    if minpr.sell[i] >= self.workers.num * self.usage[i]:
-                        if self.money >= self.workers.num * self.usage[i]:
-                            minpr.money += pricedict[minpr] * self.workers.num * self.usage[i]
-                            self.money -= pricedict[minpr] * self.workers.num * self.usage[i]
-                            self.buy[i] += self.workers.num * self.usage[i]
-                            minpr.sell[i] -= self.workers.num * self.usage[i]
+                    if minpr.sell[i] >= self.num_workers * self.usage[i]:
+                        if self.money >= self.num_workers * self.usage[i]*pricedict[minpr]:
+                            minpr.money += pricedict[minpr] * self.num_workers * self.usage[i]
+                            self.money -= pricedict[minpr] * self.num_workers * self.usage[i]
+                            self.buy[i] += self.num_workers * self.usage[i]
+                            minpr.sell[i] -= self.num_workers * self.usage[i]
                             if self.money < 0:
                                 print('<0 1')
                         else:
@@ -273,7 +297,7 @@ class Factory:
                             self.money -= self.money
                             if self.money < 0:
                                 print('<0 4')
-                    if self.workers.num * self.usage[i] <= self.buy[i]:
+                    if self.num_workers * self.usage[i] <= self.buy[i]:
                         flag1 = False
                     pricedict.pop(minpr)
                     if not pricedict:
@@ -295,32 +319,87 @@ class Factory:
                             1 + roadcoef * np.sqrt((j.location.area[0][0] - self.location.area[0][0]) ** 2 +
                                                    (j.location.area[0][1] - self.location.area[0][1]) ** 2))
             flag1 = True
-            if self.booster[i] < self.workers.num * self.boosterusage[i] and self.money != 0:
+            if self.type:
+                condition = self.type
+                money_sum = 0
+                for work_iter in self.workers_dict:
+                    money_sum += work_iter.money
+            else:
+                condition = self.money !=0
+            if self.booster[i] < self.num_workers * self.boosterusage[i] and condition:       # and self.money != 0
                 while flag1:
                     minpr = min(pricedict, key=pricedict.get)
-                    if minpr.sell[i] >= self.workers.num * self.boosterusage[i]:
-                        if self.money >= self.workers.num * self.boosterusage[i]:
-                            minpr.money += pricedict[minpr] * self.workers.num * self.boosterusage[i]
-                            self.money -= pricedict[minpr] * self.workers.num * self.boosterusage[i]
-                            self.booster[i] += self.workers.num * self.boosterusage[i]
-                            minpr.sell[i] -= self.workers.num * self.boosterusage[i]
-                        else:
+                    if minpr.sell[i] >= self.num_workers * self.boosterusage[i]:
+                        if self.money >= self.num_workers * self.boosterusage[i]*pricedict[minpr]:
+                            minpr.money += pricedict[minpr] * self.num_workers * self.boosterusage[i]
+                            self.money -= pricedict[minpr] * self.num_workers * self.boosterusage[i]
+                            self.booster[i] += self.num_workers * self.boosterusage[i]
+                            minpr.sell[i] -= self.num_workers * self.boosterusage[i]
+                            print('BOOST1 enough')
+
+                        elif self.type and money_sum + self.money >= self.num_workers * self.boosterusage[i]*pricedict[minpr]:
+                            for work_iter in self.workers_dict:
+                                work_iter.money -= work_iter.num * self.boosterusage[i]*pricedict[minpr] - self.money * work_iter.num / self.num_workers
+                            self.money += self.num_workers * self.boosterusage[i]*pricedict[minpr] - self.money
+
+                            minpr.money += pricedict[minpr] * self.num_workers * self.boosterusage[i]
+                            self.money -= pricedict[minpr] * self.num_workers * self.boosterusage[i]
+                            self.booster[i] += self.num_workers * self.boosterusage[i]
+                            minpr.sell[i] -= self.num_workers * self.boosterusage[i]
+                            print('BOOST enough')
+                        elif self.type and money_sum + self.money < self.num_workers * self.boosterusage[i]*pricedict[minpr]:
+                            self.money += money_sum
+                            for work_iter in self.workers_dict:
+                                work_iter.money = 0
                             minpr.money += self.money
                             self.booster[i] += self.money / pricedict[minpr]
                             minpr.sell[i] -= self.money / pricedict[minpr]
                             self.money -= self.money
+                            print('BOOST NOT enough')
+
+                        elif not self.type:
+                            minpr.money += self.money
+                            self.booster[i] += self.money / pricedict[minpr]
+                            minpr.sell[i] -= self.money / pricedict[minpr]
+                            self.money -= self.money
+                            print('BOOST 2enough')
+
                     else:
                         if self.money >= pricedict[minpr] * minpr.sell[i]:
                             minpr.money += pricedict[minpr] * minpr.sell[i]
                             self.money -= pricedict[minpr] * minpr.sell[i]
                             self.booster[i] += minpr.sell[i]
                             minpr.sell[i] -= minpr.sell[i]
-                        else:
+                            print('BOOST 3enough')
+
+                        elif self.type and money_sum + self.money >= pricedict[minpr] * minpr.sell[i]:
+                            for work_iter in self.workers_dict:
+                                work_iter.money -= (work_iter.num * pricedict[minpr] * minpr.sell[i] - self.money * work_iter.num) / self.num_workers
+                            self.money += pricedict[minpr] * minpr.sell[i] - self.money
+                            minpr.money += pricedict[minpr] * minpr.sell[i]
+                            self.money -= pricedict[minpr] * minpr.sell[i]
+                            self.booster[i] += minpr.sell[i]
+                            minpr.sell[i] -= minpr.sell[i]
+                            print('BOOST4 enough')
+
+                        elif self.type and money_sum + self.money < pricedict[minpr] * minpr.sell[i]:
+                            self.money += money_sum
+                            for work_iter in self.workers_dict:
+                                work_iter.money = 0
                             minpr.money += self.money
                             self.booster[i] += self.money / pricedict[minpr]
                             minpr.sell[i] -= self.money / pricedict[minpr]
                             self.money -= self.money
-                    if self.workers.num * self.boosterusage[i] <= self.booster[i]:
+                            print('BOOST55 enough')
+
+                        elif not self.type:
+                            minpr.money += self.money
+                            self.booster[i] += self.money / pricedict[minpr]
+                            minpr.sell[i] -= self.money / pricedict[minpr]
+                            self.money -= self.money
+                            print('BOOST6enough')
+
+                    if self.num_workers * self.boosterusage[i] <= self.booster[i]:
                         flag1 = False
                     pricedict.pop(minpr)
                     if not pricedict:
@@ -353,7 +432,6 @@ class Factory:
         for i in self.sell:
             self.soldprevious[i] = self.after_creation[i] - self.sell[i]
 
-
     def pricechangeagain(self):
         """в зависимости от того, как изменилась цена в предыдущий раз, и как изменилась прибыль, либо продолжаем изменять
         цену в том же духе, либо наоборот"""
@@ -385,11 +463,16 @@ class Factory:
         смотрим, есть ли у них достаточно еды, если достаточно, то хрен с ними
         :return:
         """
-        self.workers.money += self.money
-        self.money = 0
-        for key in self.workers.cons:
-            if key in self.sell.keys():
-                if self.workers.inventory[key] < self.workers.cons[key] * self.workers.total_num*1.5:# 1.5 - это просто на всякий случай коэффициент. если дети родятся, то чтоб не голодали
-                    difference = self.workers.cons[key] * self.workers.total_num*1.5 - self.workers.inventory[key]
-                    self.workers.inventory[key] = self.workers.cons[key] * self.workers.total_num*1.5
-                    self.sell[key] -= difference
+        if len(self.workers_dict.keys()) != 0 and self.num_workers != 0:
+            for j in self.workers_dict:
+                j.money += self.money * j.num / self.num_workers
+            self.money = 0
+
+            consum = self.workers_dict.keys()
+            for worker_iter in consum:
+                for key in worker_iter.cons:
+                    if key in self.sell.keys() and self.sell[key] >= worker_iter.cons[key] * worker_iter.total_num*1.5:
+                        if worker_iter.inventory[key] < worker_iter.cons[key] * worker_iter.total_num*1.5:                  # 1.5 - это просто на всякий случай коэффициент. если дети родятся, то чтоб не голодали
+                            difference = worker_iter.cons[key] * worker_iter.total_num*1.5 - worker_iter.inventory[key]
+                            worker_iter.inventory[key] = worker_iter.cons[key] * worker_iter.total_num*1.5
+                            self.sell[key] -= difference

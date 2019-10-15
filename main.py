@@ -7,6 +7,8 @@ import goods as gds
 import pops as po
 import factory as fct
 import state
+import culture as clt
+import religion as rlg
 
 
 def risov(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg):
@@ -157,8 +159,17 @@ def main():
     state2 = state.State('Lochonija',(0,0,100))     # 2
 
     serf, worker, soldier,schoolers = stra.Existing_Strat()     # назначаем страты населения
+    pakistani, indian = clt.exist_cult()
+    jewish,sunni = rlg.exist_rel()
 
-    bolvan = po.Pops(15,100,serf,1,100,1.00,False)     # болванчик для того, чтоб создать город (он привязывается к населению)
+    male_age = np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,
+                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)
+    female_age = np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,
+                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)
+
+    bolvan = po.Pops(15,male_age,female_age,serf,pakistani,sunni,100,1.00,False)     # болванчик для того, чтоб создать город (он привязывается к населению)
                                                         # но такое у меня чувство, что я эту механику уберу
 
     city = stl.Settlement(state1,(50,60),mm,'Govnovodsk',bolvan,schoolers)     # тестовые города
@@ -170,12 +181,14 @@ def main():
 
     grain, fertilizer, fish, whool, fabric, iron = gds.existing_goods()     # назначаем производимые товары
 
-    po.Pops(stl.Settlement.slovar['Zernochujsk'], 100, serf, 1, 100,1)      # назначаем попы - pop - экземпляр "единицы" населения
-    po.Pops(stl.Settlement.slovar['Govnovodsk'],100,serf,1,100,1)
-    po.Pops(stl.Settlement.slovar['Pidrozhopsk'],100,serf,1,100,1)
-    po.Pops(stl.Settlement.slovar['Muchosransk'], 100,serf, 1, 100, 1)
-    po.Pops(stl.Settlement.slovar['Jobozadsk'], 100,serf,1, 100, 1)
-    po.Pops(stl.Settlement.slovar['Gorojobsk'],100,worker,1,100,1)
+
+
+    po.Pops(stl.Settlement.slovar['Zernochujsk'], male_age.copy(),female_age.copy(), serf,pakistani,sunni, 100,1)      # назначаем попы - pop - экземпляр "единицы" населения
+    po.Pops(stl.Settlement.slovar['Govnovodsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
+    po.Pops(stl.Settlement.slovar['Pidrozhopsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
+    po.Pops(stl.Settlement.slovar['Muchosransk'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
+    po.Pops(stl.Settlement.slovar['Jobozadsk'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
+    po.Pops(stl.Settlement.slovar['Gorojobsk'],male_age.copy(),female_age.copy(),worker,pakistani,sunni,100,1)
     fct.Factory(stl.Settlement.slovar['Zernochujsk'], serf, grain, 200, 1, 1000, 0,True)     # назначаем заводы
     fct.Factory(stl.Settlement.slovar['Govnovodsk'],serf,grain,200,1,1000,0,True)
     fct.Factory(stl.Settlement.slovar['Pidrozhopsk'], serf, fertilizer, 100, 1, 1000)
@@ -255,7 +268,9 @@ def main():
     while 1:
         """всё хуярится через вайл"""
         #print('СДЕЛАТЬ МИГРАЦИЮ И ПОИСК НОВОЙ РАБОТЫ, А ПОТОМ ЦЕНООБРАЗОВАНИЕ И БЛЯ ЕЩЁ ЧТО-ТО')
-
+        # print('ЭТИ ЕБАНЫЕ ПИДОРЫ ПЛОДЯТСЯ СРАЗУ ДЕСЯТКОМ ВОЗРАСТНЫХ ГРУПП: ПОЧЕМУ-ТО ПРИ КАЖДОМ СОЗДАНИИ ПОПА
+        # ПРОИСХОДИТ ИСПОЛЬЗОВАНИЕ МЕТОДА POPCHANGE И ВСЕ СТАРЕЮТ НА 6 ЛЕТ И РОЖАЮТ ДЕТЕЙ, А ЕЩЁ ПОЧЕМУ-ТО ПРИ
+        # СОЗДАНИИ НОВЫХ РАБОЧИХ ПОПОВ КРОМЕ ПЕРВОГО В НИХ НЕ ПЕРЕДАЮТСЯ ДАННЫЕ С SELF.MALE_AGE ОНИ НУЛЕВЫЕ')
         #print('НЕ ПОКУПКА УСИЛИТЕЛЯ, ЕСЛИ КОНЕЧНАЯ ЦЕНА ПРОДУКТА СЛИШКОМ НИЗКАЯ')
         for i in pg.event.get():
             """обрабатывается нажатие клавиш клавиатуры с pygame"""
@@ -294,29 +309,33 @@ def main():
             print('distribution')
             weekdistribution += 1
             for i in stl.Settlement.slovar:     # по каждому городу в общем словаре городов
-                for j in stl.Settlement.slovar[i].pops:     # для каждого попа в этом городе
-                    if stl.Settlement.slovar[i].pops[j].unemployed == 1:     # была тема, стала костылём, но хз пока, стоит ли убирать
+                iter_for_pops = list(stl.Settlement.slovar[i].pops)         # этот лист ввёл ибо добавляются новые попы в процессе
+                for j in iter_for_pops:     # для каждого попа в этом городе
+                    print(stl.Settlement.slovar[i].name,stl.Settlement.slovar[i].pops[j].total_num)
+                    if stl.Settlement.slovar[i].pops[j].unemployed == 1:     # нужно чтобы отделить попы заводские от безработных
                         if stl.Settlement.slovar[i].pops[j].num != 0:            # ежели есть кто из работяг в попе
-                            stl.Settlement.summakubow(stl.Settlement.slovar[i],j)     # считаем нормировку для коэффициентов распределения попов по заводам
+                            stl.Settlement.summakubow(stl.Settlement.slovar[i],stl.Settlement.slovar[i].pops[j])     # считаем нормировку для коэффициентов распределения попов по заводам
                             for k in stl.Settlement.slovar[i].factories:             # распределяем по этим заводам, которые все находятся в этом городе
-                                if k.work_type == j.strata:     # проверка, подходит ли завод типу попа. ибо священники на заводах не въёбывают
+                                if k.work_type == stl.Settlement.slovar[i].pops[j].strata:     # проверка, подходит ли завод типу попа. ибо священники на заводах не въёбывают
                                     fct.Factory.coef(stl.Settlement.slovar[i].factories[k])     # считаем коэффициенты
-                                po.Pops.facsearch(j)     # непосредственно распределяем население попа в соответствии с коэффициентами
+                                po.Pops.facsearch(stl.Settlement.slovar[i].pops[j])     # непосредственно распределяем население попа в соответствии с коэффициентами
 
 
         if (xt-25)//100 - weekbuying > 0:
             """покупка всего и вся"""
-            print('production')
+            print('buying')
             weekbuying += 1
             treck = {}
             trecksell = {}
+            print(fertilizer.prices.values())
             for i in stl.Settlement.slovar:                       # по всем городам
                 for j in stl.Settlement.slovar[i].factories:     # и заводам в этих городах
                     fct.Factory.factbuy(j)                       # завод покупает нужные ресурсы
                     fct.Factory.factboostbuy(j)                  # и бустеры (типа удобрения для С/Х)
-                    if stl.Settlement.slovar[i].factories[j].type == 1:     # эта херня на попозже. чтоб учесть, что крестьяне работают на себя а не барина
-                        #fct.Factory.serf_winter(stl.Settlement.slovar[i].factories[j])
-                        print()
+                    if j.location.name == 'Pidrozhopsk':
+                        print('DEBUG PIDRO FAC', j.money,j.sell)
+                    if j.location.name == 'Jobozadsk':
+                        print('DEBUG JOBO FAC', j.money,j.sell)
                 for j in stl.Settlement.slovar[i].pops:     # теперь для попов
                     po.Pops.popbuy(j)                    # покупают жрачку и т.д.
 
@@ -365,8 +384,17 @@ def main():
             print('corrections')
             weekcorrections += 1
             for i in stl.Settlement.slovar:
-                for j in stl.Settlement.slovar[i].pops:
-                    po.Pops.popchange(j)
+                iter_for_pops = list(stl.Settlement.slovar[i].pops) # этот лист ввёл ибо удаляются пустые попы в процессе
+                for j in iter_for_pops:
+                    po.Pops.popchange(stl.Settlement.slovar[i].pops[j])
+                    if stl.Settlement.slovar[i].pops[j].total_num == 0:                            # удаляем пустые попы. чтоб память не жрали
+                        stl.Settlement.slovar[i].pops[j].location.state.money += stl.Settlement.slovar[i].pops[j].money           # перемещаем их деньги и инвентарь в казну
+                        for key in stl.Settlement.slovar[i].pops[j].inventory:                     # а удалять у самих попов смысла нет - удаляем поп полностью
+                            if key in stl.Settlement.slovar[i].pops[j].location.state.inventory:
+                                stl.Settlement.slovar[i].pops[j].location.state.inventory[key] += stl.Settlement.slovar[i].pops[j].inventory[key]
+                            else:
+                                stl.Settlement.slovar[i].pops[j].location.state.inventory[key] = stl.Settlement.slovar[i].pops[j].inventory[key]
+                        del stl.Settlement.slovar[i].pops[j]
                 stl.Settlement.stlpopul(stl.Settlement.slovar[i])
                 stl.Settlement.city_growth(stl.Settlement.slovar[i],mm,background)
 
