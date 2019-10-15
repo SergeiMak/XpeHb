@@ -22,6 +22,13 @@ import numpy as np
 Сделать изменение оплаты труда - по сути рынок труда.
 Сделать систему основания новых поселений при миграции.
 """
+
+
+"""
+стоит обратить внимание, что все параметры эффективности производства хранятся непосредственно в экземпляре завода.
+т.е. с открытием новой технологии не происходит автоматически распространение её на ВСЕ заводы. хорошо, кстати, моделирует
+современное состояние промышленности в восточной европе.
+"""
 class Factory:
     Fact_number = 0
     slovar = dict()                          # словарь всех заводов. вот только нахуя?
@@ -310,9 +317,10 @@ class Factory:
     def factboostbuy(self):
         """то же самое, только теперь покупается бустер"""
         roadcoef = 0.1
+        summa = 0
+        for qwe in self.effectiveness:
+            summa += self.effectiveness[qwe] * (1 + self.bonuses[qwe])
         for i in self.booster:
-            if self.good.name == 'Fish':
-                print('FISHBUYBOOST')
             pricedict = goods.Goods.gddict[i].prices.copy()
             for j in pricedict:
                 pricedict[j] = pricedict[j] * (
@@ -329,6 +337,13 @@ class Factory:
             if self.booster[i] < self.num_workers * self.boosterusage[i] and condition:       # and self.money != 0
                 while flag1:
                     minpr = min(pricedict, key=pricedict.get)
+                    """
+                    тут ввожу, есть ли смысл покупать бустер производства. проверка:
+                     цена бустера < (множитель_бустера - 1) * сумма(эффективность_пр-ва_i-го_товара * (1 + бонус_i)) / траты_бустера_на_ед-цу_товара
+                     выкладки у меня на листике 
+                    """
+                    if pricedict[minpr] > (self.boosterbonus[i] - 1)* summa / self.boosterusage[i]:
+                        break
                     if minpr.sell[i] >= self.num_workers * self.boosterusage[i]:
                         if self.money >= self.num_workers * self.boosterusage[i]*pricedict[minpr]:
                             minpr.money += pricedict[minpr] * self.num_workers * self.boosterusage[i]
