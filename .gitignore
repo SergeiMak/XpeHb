@@ -8,3 +8,7 @@
 /__pycache__/settlement.cpython-37.pyc
 /__pycache__/state.cpython-37.pyc
 /__pycache__/strata.cpython-37.pyc
+.vs/VSWorkspaceState.json
+__pycache__/camera.cpython-37.pyc
+__pycache__/culture.cpython-37.pyc
+*.pyc

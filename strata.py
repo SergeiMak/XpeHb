@@ -17,8 +17,8 @@ class Strata:
         Strata.Str_number  += 1
 
         self.number = Strata.Str_number
-        self.cons = cons123             # типа то, что жрёт поп этого класса
-        self.cons_notfood = consnf               # что потребляет не из еды
+        self.consumption = cons123             # типа то, что жрёт поп этого класса
+        self.consumptionNotFood = consnf               # что потребляет не из еды
         self.birth_rate = brate                      # тип разная скорость воспроизводства у профессоров и голожопых крестьян. но для 19 века это неправда :(
 
 

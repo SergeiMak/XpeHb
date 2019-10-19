@@ -1,206 +1,67 @@
 import class_and_agent as caa
 import numpy as np
-import strata as stra
-import settlement as stl
+import strata
+import settlement
 import pygame as pg
-import goods as gds
-import pops as po
-import factory as fct
+import goods
+import pops
+import factory
 import state
-import culture as clt
-import religion as rlg
+import culture
+import religion as religion
+import maps as map
+from camera import draw,politrisov
 
-
-def risov(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg):
-    """
-    Функция нужна для перерисовки того, что выводится непосредственно на экран при приближении. ибо столько
-    пикселей сразу рисовать - это охуеть можно. короч оптимизация, все дела.
-    :param xe:      координата, ответственная за положение карты на экране (по сути координата левого верхнего угла
-                            основного полотна - полотна без приближения
-    :param xg:      координата места, куда щёлкнули правой кнопкой мыши для приближения
-    :param ye:
-    :param yg:
-    :param rasst:   хотел ввести параметр, чтоб рисовало часть полотна за экраном (типа для плавности и скорости)
-                            но потом понял, что это всё хуйня
-    :param pribl:   по идее для ещё большего приближения, но там чё-то как-то багает, а единичное приближение меня как-то
-                            пока вплоне устраивает
-    :param Dlina:   длина массива с картой (т.е. количество пикселей на основном полотне. в каждом пикселе свой "биом"
-                            и по идее пиксель должен соответствовать ~1км
-    :param mm:      матрица с картой
-    :param bg:      полотно, на котором рисуем приближение
-    :return:
-    """
-    for i in range(-xe + xg - (Dlina // (2 * pribl)),
-                   -xe + xg + (Dlina // (2 * pribl))):
-        for j in range(-ye + yg - (Dlina // (2 * pribl)),
-                       -ye + yg + (Dlina // (2 * pribl))):
-
-            if mm[i, j] == 1:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0,100,0):
-                    pg.draw.rect(bg, (0, 100, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                               pribl, pribl))
-
-            elif mm[i, j] == 2:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (50, 50, 50):
-                    pg.draw.rect(bg, (50, 50, 50), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                                   (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                                   pribl, pribl))
-            elif mm[i, j] == 3:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (50, 50, 50):
-                    pg.draw.rect(bg, (50, 50, 50), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                                (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                                pribl, pribl))
-            elif mm[i, j] == 4:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0, 0, 0):
-                    pg.draw.rect(bg, (0, 0, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                             (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                             pribl, pribl))
-            elif mm[i, j] == 5:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (120, 150, 0):
-                    pg.draw.rect(bg, (120, 150, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                               pribl, pribl))
-            elif mm[i, j] == 0:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0, 0, 150):
-                    pg.draw.rect(bg, (0, 0, 150), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                               pribl, pribl))
-            elif mm[i,j] >20:
-                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (mm[i,j], 0, 255 - mm[i,j]):
-                    pg.draw.rect(bg, (mm[i,j], 0, 255 - mm[i,j]), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                               pribl, pribl))
-
-
-def politrisov(xe,xg,ye,yg,rasst,pribl,Dlina,pm,pbg):
-    """то же, что и risov, только для политической карты"""
-    for i in range(-xe + xg - (Dlina // (2 * pribl)),
-                   -xe + xg + (Dlina // (2 * pribl))):
-        for j in range(-ye + yg - (Dlina // (2 * pribl)),
-                       -ye + yg + (Dlina // (2 * pribl))):
-
-            for k in state.State.statenumberdict:
-                if pm[i, j] == k:
-                    if pbg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                  (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != state.State.statenumberdict[k].colour:
-
-                        pg.draw.rect(pbg,state.State.statenumberdict[k].colour,
-                                     ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                                   (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                                   pribl, pribl))
-                elif pm[i, j] == 0:
-                        pg.draw.rect(pbg,(0,0,0),
-                                     ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                                                   (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
-                                                   pribl, pribl),1)
-
-
-def mapmatrix(Dlmatr):
-    """определяем карту"""
-    mm = np.zeros((Dlmatr,Dlmatr),dtype=np.uint8)
-    mm[30:100, 40:100] = 1
-    mm[30:50, 60:65] = 0
-    mm[45:50, 65:100] = 0
-    mm[30:50, 60:65] = 0
-    mm[430:500, 440:500] = 1
-    mm[430:450, 460:465] = 0
-    mm[445:450, 465:500] = 0
-    mm[430:450, 460:465] = 0
-    mm[450:455, 470:480] = 2
-    mm[470:480, 440:450] = 3
-    mm[475, 450:475] = 4
-    mm[455:475, 475] = 4
-    return mm
-
-def politmm(Dlmatr):
-    """политическая карта"""
-    pm = np.zeros((Dlmatr,Dlmatr) ,dtype=np.uint8)
-    pm[30:100, 40:100] = 1
-    pm[430:500, 440:500] = 2
-    return pm
-
-def ironmm(Dlmatr):
-    """карта с залежами железа"""
-    rm = np.zeros((Dlmatr,Dlmatr),dtype=np.uint8)
-    rm[52,62] = 15
-    rm[54, 61] = 120
-    rm[56, 63] = 210
-    rm[52, 66] = 73
-    rm[50, 62] = 117
-    return rm
-
-def grainmm(Dlmatr):
-    """
-    карта с залежами питательных веществ для выращивания зерна
-
-    Планы: сделать нормальное распределение и занулить в морях-горах и т.д. и в принципе разное распределение на разной местности
-    :param Dlmatr:
-    :return:
-    """
-    gm = np.zeros((Dlmatr,Dlmatr),dtype=np.uint8)
-    for i in range(len(gm)):
-        for j in range(len(gm)):
-            gm[i,j] = np.random.randint(0,255)
-    return gm
 
 def main():
     Dlina = 500                                     # сколько пикселей экран
     Dlmatr = 1000                                   # сколько пикселей карта
     rasst = 100                                     # хуйня ебаная ненужная
     changed = False                                 # надо чтоб проверять, сдвинулась ли карта, чтоб лишний раз не перерисовывать
-    mm = mapmatrix(Dlmatr)                          # хуярим основную карту с биомами
-    pm = politmm(Dlmatr)     # политическую карту
-    im = ironmm(Dlmatr)     # карту с железом
-    gm = grainmm(Dlmatr)     # карту с зерном
+
+
+    mm = map.createMyMap(1,Dlmatr)                  # хуярим основную карту с биомами
+    politicalMap = map.createMyMap(2,Dlmatr)      # политическую карту
+    ironMap = map.createMyMap(3,Dlmatr)              # карту с железом
+    grainMap = map.createMyMap(4,Dlmatr)            # карту с зерном
 
     state1 = state.State('Pidronija',(100,0,0))     # тестовое государство 1
     state2 = state.State('Lochonija',(0,0,100))     # 2
 
-    serf, worker, soldier,schoolers = stra.Existing_Strat()     # назначаем страты населения
-    pakistani, indian = clt.exist_cult()
-    jewish,sunni = rlg.exist_rel()
+    serf, worker, soldier,schoolers = strata.Existing_Strat()     # назначаем страты населения
+    pakistani, indian = culture.exist_cult()
+    jewish,sunni = religion.exist_rel()
 
-    male_age = np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)
-    female_age = np.array((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), dtype=np.uint16)
+    male_age = np.zeros(75,dtype=np.uint16 )
+    male_age[21] = 100
+    female_age = np.asarray(male_age)
 
-    bolvan = po.Pops(15,male_age,female_age,serf,pakistani,sunni,100,1.00,False)     # болванчик для того, чтоб создать город (он привязывается к населению)
+    bolvan = pops.Pops(15,male_age,female_age,serf,pakistani,sunni,100,1.00,False)     # болванчик для того, чтоб создать город (он привязывается к населению)
                                                         # но такое у меня чувство, что я эту механику уберу
 
-    city = stl.Settlement(state1,(50,60),mm,'Govnovodsk',bolvan,schoolers)     # тестовые города
-    town = stl.Settlement(state1,(60,70),mm,'Pidrozhopsk',bolvan,schoolers)
-    city1 = stl.Settlement(state1,(55,60),mm,'Muchosransk',bolvan,schoolers)
-    town1 = stl.Settlement(state1,(65, 70), mm, 'Jobozadsk',bolvan,schoolers)
-    stl.Settlement(state1,(50,65), mm,'Gorojobsk',bolvan,schoolers)
-    stl.Settlement(state1, (70, 70), mm, 'Zernochujsk', bolvan,schoolers)
+    city = settlement.Settlement(state1,(50,60),mm,'Govnovodsk',bolvan,schoolers)     # тестовые города
+    town = settlement.Settlement(state1,(60,70),mm,'Pidrozhopsk',bolvan,schoolers)
+    city1 = settlement.Settlement(state1,(55,60),mm,'Muchosransk',bolvan,schoolers)
+    town1 = settlement.Settlement(state1,(65, 70), mm, 'Jobozadsk',bolvan,schoolers)
+    settlement.Settlement(state1,(50,65), mm,'Gorojobsk',bolvan,schoolers)
+    settlement.Settlement(state1, (70, 70), mm, 'Zernochujsk', bolvan,schoolers)
 
-    grain, fertilizer, fish, whool, fabric, iron = gds.existing_goods()     # назначаем производимые товары
+    grain, fertilizer, fish, whool, fabric, iron = goods.existing_goods()     # назначаем производимые товары
 
 
 
-    po.Pops(stl.Settlement.slovar['Zernochujsk'], male_age.copy(),female_age.copy(), serf,pakistani,sunni, 100,1)      # назначаем попы - pop - экземпляр "единицы" населения
-    po.Pops(stl.Settlement.slovar['Govnovodsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
-    po.Pops(stl.Settlement.slovar['Pidrozhopsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
-    po.Pops(stl.Settlement.slovar['Muchosransk'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
-    po.Pops(stl.Settlement.slovar['Jobozadsk'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
-    po.Pops(stl.Settlement.slovar['Gorojobsk'],male_age.copy(),female_age.copy(),worker,pakistani,sunni,100,1)
-    fct.Factory(stl.Settlement.slovar['Zernochujsk'], serf, grain, 200, 1, 1000, 0,True)     # назначаем заводы
-    fct.Factory(stl.Settlement.slovar['Govnovodsk'],serf,grain,200,1,1000,0,True)
-    fct.Factory(stl.Settlement.slovar['Pidrozhopsk'], serf, fertilizer, 100, 1, 1000)
-    fct.Factory(stl.Settlement.slovar['Muchosransk'],serf,fish,200,1,1000,0,True)
-    fct.Factory(stl.Settlement.slovar['Jobozadsk'], serf, fertilizer, 100, 1, 1000)
-    fct.Factory(stl.Settlement.slovar['Gorojobsk'],worker,iron,100,1,1000)
+    pops.Pops(settlement.Settlement.slovar['Zernochujsk'], male_age.copy(),female_age.copy(), serf,pakistani,sunni, 100,1)      # назначаем попы - pop - экземпляр "единицы" населения
+    pops.Pops(settlement.Settlement.slovar['Govnovodsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
+    pops.Pops(settlement.Settlement.slovar['Pidrozhopsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
+    pops.Pops(settlement.Settlement.slovar['Muchosransk'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
+    pops.Pops(settlement.Settlement.slovar['Jobozadsk'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
+    pops.Pops(settlement.Settlement.slovar['Gorojobsk'],male_age.copy(),female_age.copy(),worker,pakistani,sunni,100,1)
+    factory.Factory(settlement.Settlement.slovar['Zernochujsk'], serf, grain, 200, 1, 1000, 0,True)     # назначаем заводы
+    factory.Factory(settlement.Settlement.slovar['Govnovodsk'],serf,grain,200,1,1000,0,True)
+    factory.Factory(settlement.Settlement.slovar['Pidrozhopsk'], serf, fertilizer, 100, 1, 1000)
+    factory.Factory(settlement.Settlement.slovar['Muchosransk'],serf,fish,200,1,1000,0,True)
+    factory.Factory(settlement.Settlement.slovar['Jobozadsk'], serf, fertilizer, 100, 1, 1000)
+    factory.Factory(settlement.Settlement.slovar['Gorojobsk'],worker,iron,100,1,1000)
 
     pg.init()
 
@@ -232,9 +93,9 @@ def main():
 
     for i in range(Dlmatr):
         for j in range(Dlmatr):
-            if im[i,j] > 20:
-                ironbackground.set_at((i, j), (im[i,j], 0,255 - im[i,j]))
-                imm[i,j] = im[i,j]
+            if ironMap[i,j] > 20:
+                ironbackground.set_at((i, j), (ironMap[i,j], 0,255 - ironMap[i,j]))
+                imm[i,j] = ironMap[i,j]
 
 
     bg = pg.Surface((Dlmatr, Dlmatr))
@@ -242,7 +103,7 @@ def main():
     for i in range(Dlmatr):
         for j in range(Dlmatr):
             for k in state.State.statenumberdict:
-                if pm[i, j] == k:
+                if politicalMap[i, j] == k:
                     politbg.set_at((i, j), state.State.statenumberdict[k].colour)
 
     politbg.set_alpha(100)
@@ -307,24 +168,24 @@ def main():
                     print(pos,xe,ye)
                     pribl = pribl*10
                     bg = pg.Surface((Dlina, Dlina))
-                    risov(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg)
+                    draw(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg)
                     sur = bg
 
         if xt//100 - weekdistribution > 0:
             """распределение по работе попов"""
             print('distribution')
             weekdistribution += 1
-            for i in stl.Settlement.slovar:     # по каждому городу в общем словаре городов
-                iter_for_pops = list(stl.Settlement.slovar[i].pops)         # этот лист ввёл ибо добавляются новые попы в процессе
+            for i in settlement.Settlement.slovar:     # по каждому городу в общем словаре городов
+                iter_for_pops = list(settlement.Settlement.slovar[i].pops)         # этот лист ввёл ибо добавляются новые попы в процессе
                 for j in iter_for_pops:     # для каждого попа в этом городе
-                    print(stl.Settlement.slovar[i].name,stl.Settlement.slovar[i].pops[j].total_num)
-                    if stl.Settlement.slovar[i].pops[j].unemployed == 1:     # нужно чтобы отделить попы заводские от безработных
-                        if stl.Settlement.slovar[i].pops[j].num != 0:            # ежели есть кто из работяг в попе
-                            stl.Settlement.summakubow(stl.Settlement.slovar[i],stl.Settlement.slovar[i].pops[j])     # считаем нормировку для коэффициентов распределения попов по заводам
-                            for k in stl.Settlement.slovar[i].factories:             # распределяем по этим заводам, которые все находятся в этом городе
-                                if k.work_type == stl.Settlement.slovar[i].pops[j].strata:     # проверка, подходит ли завод типу попа. ибо священники на заводах не въёбывают
-                                    fct.Factory.coef(stl.Settlement.slovar[i].factories[k])     # считаем коэффициенты
-                                po.Pops.facsearch(stl.Settlement.slovar[i].pops[j])     # непосредственно распределяем население попа в соответствии с коэффициентами
+                    print(settlement.Settlement.slovar[i].name,settlement.Settlement.slovar[i].pops[j].total_num)
+                    if settlement.Settlement.slovar[i].pops[j].unemployed == 1:     # нужно чтобы отделить попы заводские от безработных
+                        if settlement.Settlement.slovar[i].pops[j].num != 0:            # ежели есть кто из работяг в попе
+                            settlement.Settlement.summakubow(settlement.Settlement.slovar[i],settlement.Settlement.slovar[i].pops[j])     # считаем нормировку для коэффициентов распределения попов по заводам
+                            for k in settlement.Settlement.slovar[i].factories:             # распределяем по этим заводам, которые все находятся в этом городе
+                                if k.work_type == settlement.Settlement.slovar[i].pops[j].strata:     # проверка, подходит ли завод типу попа. ибо священники на заводах не въёбывают
+                                    factory.Factory.coef(settlement.Settlement.slovar[i].factories[k])     # считаем коэффициенты
+                                pops.Pops.facsearch(settlement.Settlement.slovar[i].pops[j])     # непосредственно распределяем население попа в соответствии с коэффициентами
 
 
         if (xt-25)//100 - weekbuying > 0:
@@ -334,32 +195,32 @@ def main():
             treck = {}
             trecksell = {}
             print(fertilizer.prices.values())
-            for i in stl.Settlement.slovar:                       # по всем городам
-                for j in stl.Settlement.slovar[i].factories:     # и заводам в этих городах
-                    fct.Factory.factbuy(j)                       # завод покупает нужные ресурсы
-                    fct.Factory.factboostbuy(j)                  # и бустеры (типа удобрения для С/Х)
+            for i in settlement.Settlement.slovar:                       # по всем городам
+                for j in settlement.Settlement.slovar[i].factories:     # и заводам в этих городах
+                    factory.Factory.factbuy(j)                       # завод покупает нужные ресурсы
+                    factory.Factory.factboostbuy(j)                  # и бустеры (типа удобрения для С/Х)
                     if j.location.name == 'Pidrozhopsk':
                         print('DEBUG PIDRO FAC', j.money,j.sell)
                     if j.location.name == 'Jobozadsk':
                         print('DEBUG JOBO FAC', j.money,j.sell)
-                for j in stl.Settlement.slovar[i].pops:     # теперь для попов
-                    po.Pops.popbuy(j)                    # покупают жрачку и т.д.
+                for j in settlement.Settlement.slovar[i].pops:     # теперь для попов
+                    pops.Pops.popbuy(j)                    # покупают жрачку и т.д.
 
 
         if (xt-30)//100 - weekpricechanging > 0:
             """корректировка цен"""
             print('price')
             weekpricechanging += 1
-            for i in stl.Settlement.slovar:
-                for j in stl.Settlement.slovar[i].factories:
+            for i in settlement.Settlement.slovar:
+                for j in settlement.Settlement.slovar[i].factories:
                     if j.type:           # отдаю деньги и жратву крестьянам.
-                        fct.Factory.givefoodmoney(j)
+                        factory.Factory.givefoodmoney(j)
                     if 1 in j.price_changed.values():
-                        fct.Factory.pricechangeagain(j)
+                        factory.Factory.pricechangeagain(j)
                     elif 2 in j.price_changed.values():
-                        fct.Factory.pricechangeagain(j)
+                        factory.Factory.pricechangeagain(j)
                     else:
-                        fct.Factory.pricechange(j)
+                        factory.Factory.pricechange(j)
 
 
         if (xt-50)//100 - weekproduction > 0:
@@ -367,12 +228,14 @@ def main():
             print('production')
             weekproduction += 1
             #print(grain.prices.values())
-            for i in stl.Settlement.slovar:
-                for j in stl.Settlement.slovar[i].factories:
-                    if stl.Settlement.slovar[i].factories[j].good.name == 'Grain':
-                        #print('GRAIN',stl.Settlement.slovar[i].factories[j].sell, stl.Settlement.slovar[i].factories[j].money)
+            for i in settlement.Settlement.slovar:
+                for j in settlement.Settlement.slovar[i].factories:
+                    if settlement.Settlement.slovar[i].factories[j].good.name == 'Grain':
+                        #print('GRAIN',settlement.Settlement.slovar[i].factories[j].sell, settlement.Settlement.slovar[i].factories[j].money)
                         print()
-                    fct.Factory.create(stl.Settlement.slovar[i].factories[j],gm)
+
+                    factory.Factory.create(settlement.Settlement.slovar[i].factories[j])
+
 
 
 
@@ -380,29 +243,31 @@ def main():
             """потребление"""
             print('consumption')
             weekconsumption += 1
-            for i in stl.Settlement.slovar:
-                for j in stl.Settlement.slovar[i].pops:
+            for i in settlement.Settlement.slovar:
+                for j in settlement.Settlement.slovar[i].pops:
                     if j.num != 0:
-                        po.Pops.consume_food(stl.Settlement.slovar[i].pops[j])
+                        pops.Pops.consume_food(settlement.Settlement.slovar[i].pops[j])
 
         if (xt-95)//100 - weekcorrections > 0:
             """корректировка населения. смерть-рождение"""
             print('corrections')
             weekcorrections += 1
-            for i in stl.Settlement.slovar:
-                iter_for_pops = list(stl.Settlement.slovar[i].pops) # этот лист ввёл ибо удаляются пустые попы в процессе
+            for i in settlement.Settlement.slovar:
+                iter_for_pops = list(settlement.Settlement.slovar[i].pops) # этот лист ввёл ибо удаляются пустые попы в процессе
                 for j in iter_for_pops:
-                    po.Pops.popchange(stl.Settlement.slovar[i].pops[j])
-                    if stl.Settlement.slovar[i].pops[j].total_num == 0:                            # удаляем пустые попы. чтоб память не жрали
-                        stl.Settlement.slovar[i].pops[j].location.state.money += stl.Settlement.slovar[i].pops[j].money           # перемещаем их деньги и инвентарь в казну
-                        for key in stl.Settlement.slovar[i].pops[j].inventory:                     # а удалять у самих попов смысла нет - удаляем поп полностью
-                            if key in stl.Settlement.slovar[i].pops[j].location.state.inventory:
-                                stl.Settlement.slovar[i].pops[j].location.state.inventory[key] += stl.Settlement.slovar[i].pops[j].inventory[key]
+                    pops.Pops.popchange(settlement.Settlement.slovar[i].pops[j])
+                    if settlement.Settlement.slovar[i].pops[j].total_num == 0:                            # удаляем пустые попы. чтоб память не жрали
+                        settlement.Settlement.slovar[i].pops[j].location.state.money += settlement.Settlement.slovar[i].pops[j].money           # перемещаем их деньги и инвентарь в казну
+                        for key in settlement.Settlement.slovar[i].pops[j].inventory:                     # а удалять у самих попов смысла нет - удаляем поп полностью
+                            if key in settlement.Settlement.slovar[i].pops[j].location.state.inventory:
+                                settlement.Settlement.slovar[i].pops[j].location.state.inventory[key] += settlement.Settlement.slovar[i].pops[j].inventory[key]
                             else:
-                                stl.Settlement.slovar[i].pops[j].location.state.inventory[key] = stl.Settlement.slovar[i].pops[j].inventory[key]
-                        del stl.Settlement.slovar[i].pops[j]
-                stl.Settlement.stlpopul(stl.Settlement.slovar[i])
-                stl.Settlement.city_growth(stl.Settlement.slovar[i],mm,background,gm)
+
+                                settlement.Settlement.slovar[i].pops[j].location.state.inventory[key] = settlement.Settlement.slovar[i].pops[j].inventory[key]
+                        del settlement.Settlement.slovar[i].pops[j]
+                settlement.Settlement.stlpopul(settlement.Settlement.slovar[i])
+                settlement.Settlement.city_growth(settlement.Settlement.slovar[i],mm,background)
+
 
         #if xt//200 - monthmap > 0:
 
@@ -423,12 +288,12 @@ def main():
         if changed:
             if pribl > 1:
                 if mapmode == 0:
-                    risov(xe, xg, ye, yg, rasst, pribl, Dlina, mm, bg)
+                    draw(xe, xg, ye, yg, rasst, pribl, Dlina, mm, bg)
                 elif mapmode == 1:
-                    risov(xe, xg, ye, yg, rasst, pribl, Dlina, mm, bg)
-                    politrisov(xe,xg,ye,yg,rasst,pribl,Dlina,pm,pbg)
+                    draw(xe, xg, ye, yg, rasst, pribl, Dlina, mm, bg)
+                    politrisov(xe,xg,ye,yg,rasst,pribl,Dlina,politicalMap,pbg)
                 elif mapmode == 2:
-                    risov(xe, xg, ye, yg, rasst, pribl, Dlina, imm, bg)
+                    draw(xe, xg, ye, yg, rasst, pribl, Dlina, imm, bg)
                 changed = False
 
         pressed = pg.mouse.get_pressed()
@@ -461,11 +326,11 @@ def main():
         text3 = f1.render('Resource',0,(0,0,0))
         sc.blit(text3,(150,0))
         q1 = 0
-        for q in stl.Settlement.slovar:
-            if pg.Rect.collidepoint(stl.Settlement.arry[q1][0],(pos[0]-xe,pos[1]-ye)):
+        for q in settlement.Settlement.slovar:
+            if pg.Rect.collidepoint(settlement.Settlement.arry[q1][0],(pos[0]-xe,pos[1]-ye)):
 
-                citytext = f1.render(stl.Settlement.slovar[q].name, 0, (0, 0, 0))
-                citytext1 = f1.render(str(stl.Settlement.slovar[q].population),0,(0,0,0))
+                citytext = f1.render(settlement.Settlement.slovar[q].name, 0, (0, 0, 0))
+                citytext1 = f1.render(str(settlement.Settlement.slovar[q].population),0,(0,0,0))
 
                 if (pos[1]-50) < 0:
                     minus = -1
