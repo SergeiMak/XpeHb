@@ -28,6 +28,17 @@ import numpy as np
 стоит обратить внимание, что все параметры эффективности производства хранятся непосредственно в экземпляре завода.
 т.е. с открытием новой технологии не происходит автоматически распространение её на ВСЕ заводы. хорошо, кстати, моделирует
 современное состояние промышленности в восточной европе.
+владельцы заводов должны будут покупать модернизации к ним. купят они или нет - зависит от их консервативности.
+нужно ввести государственные субсидии на модернизацию производства - государство платит владельцу (частинику, капиталисту)
+чтобы он модернизировал своё производство - конкурентоспособность в перспективе и увеличение (или не падение) налогов
+и пошлин в будущем
+"""
+
+"""
+можно ввести в будущем в зависимости от политики государства разные методы (методы в питоне) распределения зарплаты и
+подобного между попами. сейчас всё распределяется поровну (при, например, недостатке средств на производство), а можно
+сделать несколько методов, срабатывающих при определённой политике государства (или владельца завода) - например простая
+дискриминация: введение очереди получения денег попами (притесняемым не будет хватать)
 """
 class Factory:
     Fact_number = 0
@@ -57,10 +68,11 @@ class Factory:
         self.price_changed = {}                          # как изменилась с прошлого изменения цен цена? увеличилась или уменьшилась?
         self.soldprevious = {}                               # сколько в прошлый раз продали товара (в единицах)
         if self.good.name == 'Grain':                    # нужно для многих В БУДУЩЕМ вещей, которые сложно описать с помощью знака #. ныне бесполезно
-            self.range = 10
+            self.serf_average_effectiveness = 1     # сколько может 1 работник обрабатывать земли. если ему предоставляют её в достаточном количестве
 
         self.workers_dict = {}
         self.num_workers = 0
+        self.unpaid = 0
         for key in self.workers_dict:
             self.num_workers += key.num                           # количество уже нанятых трудяг
 
@@ -145,7 +157,7 @@ class Factory:
             self.coef = (self.gehalt ** 3) / self.location.gehsum[self.work_type.name]
             self.notfull = 1
 
-    def create(self):
+    def create(self,gm):
         """производство товаров
 
         по сути просто смотрится, каковы условия работы (есть ли деньги платить людям, хватает ли ресурсов на производство
@@ -158,10 +170,27 @@ class Factory:
             self.workers_dict[key] = key.num
             self.num_workers += key.num
         whatisdone = {}
+        """
+        тут короч надо переделать структуру if-else
+        должно быть:
+        если хватает ресурсов
+            если хватает денег
+            или
+        или
+            если денег больше, чем хватает ресурсов
+            или
+        """
         if len(self.buy) != 0:
-            if self.money >= self.num_workers * self.gehalt:
-                keysell = random.choice(list(self.buy.keys()))
-                if self.buy[keysell] >= self.num_workers * self.usage[keysell]:
+            enoughresources = True
+            min_workers = self.num_workers
+            for keysell in self.buy:
+                if self.buy[keysell] < self.num_workers * self.usage[keysell]:
+                    enoughresources = False
+                    if min_workers > self.buy[keysell] / self.usage[keysell]:
+                        min_workers = self.buy[keysell] / self.usage[keysell]
+                        fewest = keysell
+            if enoughresources:
+                if self.money >= self.num_workers * self.gehalt:
                     for key in self.buy:
                         self.buy[key] -= self.num_workers * self.usage[key]
                     for key in self.sell:
@@ -173,27 +202,73 @@ class Factory:
                                 whatisdone[key1] *= self.boosterbonus[key]
                     for key1 in self.sell:
                         self.sell[key1] += whatisdone[key1]
-                self.money -= self.num_workers * self.gehalt
-                for j in self.workers_dict:
-                    j.money += j.num * self.gehalt
-            else:
-                if self.money >0:
-                    keysell = random.choice(list(self.buy.keys()))
-                    if self.buy[keysell] >= self.usage[keysell] * self.money/self.gehalt:
-                        for key in self.buy:
-                            self.buy[key] -= self.usage[key] * self.money/self.gehalt
-                        for key in self.sell:
-                            whatisdone[key] = self.effectiveness[key] * (1 + self.bonuses[key]) * self.money/self.gehalt
-                        for key in self.booster:
-                            if self.booster[key] >= self.boosterusage[key] * self.money/self.gehalt:
-                                self.booster[key] -= self.boosterusage[key] * self.money/self.gehalt
-                                for key1 in self.sell:
-                                    whatisdone[key1] *= self.boosterbonus[key]
-                        for key1 in self.sell:
-                            self.sell[key1] += whatisdone[key1]
+                    self.money -= self.num_workers * self.gehalt
                     for j in self.workers_dict:
-                        j.money += self.money * j.num/self.num_workers
+                        j.money += j.num * self.gehalt
+                else:
+                    koefic = self.money / self.gehalt
+                    for key in self.buy:
+                        self.buy[key] -= self.usage[key] * koefic
+                    for key in self.sell:
+                        whatisdone[key] = self.effectiveness[key] * (1 + self.bonuses[key]) * koefic
+                    for key in self.booster:
+                        if self.booster[key] >= self.boosterusage[key] * koefic:
+                            self.booster[key] -= self.boosterusage[key] * koefic
+                            for key1 in self.sell:
+                                whatisdone[key1] *= self.boosterbonus[key]
+                    for key1 in self.sell:
+                        self.sell[key1] += whatisdone[key1]
+                    for j in self.workers_dict:
+                        j.money += self.money * j.num / self.num_workers
                     self.money -= self.money
+                    leaving = min(self.unpaid, 1 - koefic/self.num_workers)  # если какая-то часть населения дважды не уплочена, то она частично уволится
+                    if leaving != 0:
+                        Factory.leavework(self,leaving)
+                    self.unpaid = 1 - koefic/self.num_workers
+
+            else:
+                if (self.money / self.gehalt) >= min_workers:
+
+                    for key in self.buy:
+                        self.buy[key] -= min_workers * self.usage[key]
+                    for key in self.sell:
+                        whatisdone[key] = min_workers * self.effectiveness[key] * (1 + self.bonuses[key])
+                    for key in self.booster:
+                        if self.booster[key] >= min_workers * self.boosterusage[key]:
+                            self.booster[key] -= min_workers * self.boosterusage[key]
+                            for key1 in self.sell:
+                                whatisdone[key1] *= self.boosterbonus[key]
+                    for key1 in self.sell:
+                        self.sell[key1] += whatisdone[key1]
+                    self.money -= min_workers * self.gehalt
+                    for j in self.workers_dict:
+                        j.money += j.num * self.gehalt * min_workers/self.num_workers
+                    leaving = min(self.unpaid,
+                                  1 - min_workers / self.num_workers)  # если какая-то часть населения дважды не уплочена, то она частично уволится
+                    if leaving != 0:
+                        Factory.leavework(self, leaving)
+                    self.unpaid = 1 - min_workers / self.num_workers
+                else:
+                    koefic = self.money / self.gehalt
+                    for key in self.buy:
+                        self.buy[key] -= self.usage[key] * koefic
+                    for key in self.sell:
+                        whatisdone[key] = self.effectiveness[key] * (1 + self.bonuses[key]) * koefic
+                    for key in self.booster:
+                        if self.booster[key] >= self.boosterusage[key] * koefic:
+                            self.booster[key] -= self.boosterusage[key] * koefic
+                            for key1 in self.sell:
+                                whatisdone[key1] *= self.boosterbonus[key]
+                    for key1 in self.sell:
+                        self.sell[key1] += whatisdone[key1]
+                    for j in self.workers_dict:
+                        j.money += self.money * j.num / self.num_workers
+                    self.money -= self.money
+                    leaving = min(self.unpaid,
+                                  1 - koefic / self.num_workers)  # если какая-то часть населения дважды не уплочена, то она частично уволится
+                    if leaving != 0:
+                        Factory.leavework(self, leaving)
+                    self.unpaid = 1 - koefic / self.num_workers
         elif not self.type:
             if self.money >= self.num_workers * self.gehalt:
                 self.money -= self.num_workers * self.gehalt
@@ -226,8 +301,13 @@ class Factory:
                     for j in self.workers_dict:
                         j.money += self.money * j.num / self.num_workers
                     self.money -= self.money
+                    leaving = min(self.unpaid,
+                                  1 - (self.money/self.gehalt) / self.num_workers)  # если какая-то часть населения дважды не уплочена, то она частично уволится
+                    if leaving != 0:
+                        Factory.leavework(self, leaving)
+                    self.unpaid = 1 - (self.money/self.gehalt) / self.num_workers
 
-        elif self.type:                 # это для крестьян. чтоб при отсутсутствии денег у завода, всё равно бы продолжалось производство зерна, ибо зерно крестьяне, а не завод делают
+        elif self.type and self.good.name != 'Grain':                 # это для крестьян. чтоб при отсутсутствии денег у завода, всё равно бы продолжалось производство зерна, ибо зерно крестьяне, а не завод делают
             for key in self.sell:
                 whatisdone[key] = self.num_workers * self.effectiveness[key] * (1 + self.bonuses[key])
             for key in self.booster:
@@ -239,9 +319,29 @@ class Factory:
                 self.sell[key1] += whatisdone[key1]
             if self.money < 0:
                 print('<0 11')
+        elif self.type and self.good.name == 'Grain':
+
+            for key in self.sell:
+                whatisdone[key] = 0
+            for key in self.sell:
+                for coord in self.location.grain_fields:
+                    whatisdone[key] += gm[coord] * self.effectiveness[key] * (1 + self.bonuses[key])
+            for key in self.booster:
+                if self.booster[key] >= self.num_workers * self.boosterusage[key]:
+                    self.booster[key] -= self.num_workers * self.boosterusage[key]
+                    for key1 in self.sell:
+                        whatisdone[key1] *= self.boosterbonus[key]
+            for key1 in self.sell:
+                self.sell[key1] += whatisdone[key1]
+            if self.money < 0:
+                print('<0 11')
+
+
+
         self.after_creation = self.sell.copy()
         if self.money < 0:
             print('<0 CREATE')
+
 
     def factbuy(self):
         """покупка необходимых ресурсов для производства
@@ -491,3 +591,42 @@ class Factory:
                             difference = worker_iter.cons[key] * worker_iter.total_num*1.5 - worker_iter.inventory[key]
                             worker_iter.inventory[key] = worker_iter.cons[key] * worker_iter.total_num*1.5
                             self.sell[key] -= difference
+
+
+    def leavework(self, percent):
+        shortname = self.location.pops
+        not_found = True
+        for workers_iter in self.workers_dict:
+            for key in shortname:
+                if workers_iter.culture == key.culture and workers_iter.religion == key.religion and workers_iter.strata == key.strata and key.unemployed == 1:
+                    print('one same pop for factory LEAVEWORK found in ', self.location.name)
+                    for i in range(len(self.male_age)):
+                        key.male_age[i] += workers_iter.male_age[i] * percent
+                        workers_iter.male_age[i] -= workers_iter.male_age[i] * percent
+                        key.female_age[i] += workers_iter.female_age[i] * percent
+                        workers_iter.female_age[i] -= workers_iter.female_age[i] * percent
+                    key.money += workers_iter.money * percent
+                    workers_iter.money -= workers_iter.money * percent
+                    if workers_iter.num < 0:
+                        print('DEBAG!!! POP-LEAVING < 0')
+
+                    not_found = False
+            if not_found:
+                m_age = np.array(
+                    (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), dtype=np.uint16)
+                f_age = np.array(
+                    (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), dtype=np.uint16)
+                for i in range(len(workers_iter.male_age)):
+                    m_age[i] = workers_iter.male_age[i] * percent
+                    workers_iter.male_age[i] -= workers_iter.male_age[i] * percent
+                    f_age[i] = workers_iter.female_age[i] *percent
+                    workers_iter.female_age[i] -= workers_iter.female_age[i] * percent
+
+                print('male', m_age, 'female', f_age)
+                new_money = workers_iter.money * percent
+                workers_iter.money -= workers_iter.money * percent
+                pops.Pops(workers_iter.location, m_age.copy(), f_age.copy(), workers_iter.strata, workers_iter.culture, workers_iter.religion, new_money,1)

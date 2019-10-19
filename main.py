@@ -44,8 +44,8 @@ def risov(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg):
 
             elif mm[i, j] == 2:
                 if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
-                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (150, 150, 150):
-                    pg.draw.rect(bg, (150, 150, 150), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
+                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (50, 50, 50):
+                    pg.draw.rect(bg, (50, 50, 50), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
                                                    (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
                                                    pribl, pribl))
             elif mm[i, j] == 3:
@@ -60,6 +60,12 @@ def risov(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg):
                     pg.draw.rect(bg, (0, 0, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
                                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
                                              pribl, pribl))
+            elif mm[i, j] == 5:
+                if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
+                              (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (120, 150, 0):
+                    pg.draw.rect(bg, (120, 150, 0), ((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
+                                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl,
+                                               pribl, pribl))
             elif mm[i, j] == 0:
                 if bg.get_at(((i - (-xe + xg - (Dlina // (2 * pribl)))) * pribl,
                               (j - (-ye + yg - (Dlina // (2 * pribl)))) * pribl)) != (0, 0, 150):
@@ -212,11 +218,13 @@ def main():
             if mm[i, j] == 1:
                 background.set_at((i, j), (0, 90, 0))
             elif mm[i, j] == 2:
-                background.set_at((i, j), (150, 150, 150))
+                background.set_at((i, j), (50, 50, 50))
             elif mm[i, j] == 3:
                 background.set_at((i, j), (50, 50, 50))
             elif mm[i, j] == 4:
                 background.set_at((i, j), (0, 0, 0))
+            elif mm[i, j] == 5:
+                background.set_at((i, j), (120, 150, 0))
 
 
     ironbackground = pg.Surface.copy(background)
@@ -364,7 +372,7 @@ def main():
                     if stl.Settlement.slovar[i].factories[j].good.name == 'Grain':
                         #print('GRAIN',stl.Settlement.slovar[i].factories[j].sell, stl.Settlement.slovar[i].factories[j].money)
                         print()
-                    fct.Factory.create(stl.Settlement.slovar[i].factories[j])
+                    fct.Factory.create(stl.Settlement.slovar[i].factories[j],gm)
 
 
 
@@ -394,7 +402,7 @@ def main():
                                 stl.Settlement.slovar[i].pops[j].location.state.inventory[key] = stl.Settlement.slovar[i].pops[j].inventory[key]
                         del stl.Settlement.slovar[i].pops[j]
                 stl.Settlement.stlpopul(stl.Settlement.slovar[i])
-                stl.Settlement.city_growth(stl.Settlement.slovar[i],mm,background)
+                stl.Settlement.city_growth(stl.Settlement.slovar[i],mm,background,gm)
 
         #if xt//200 - monthmap > 0:
 

@@ -28,6 +28,13 @@ class Pops:
             а дилдаковщики должны сосать хуи
     """
 
+    """
+    как только попам не будет хватать денег на их основные блага (низшие классы) или часть более дорогих благ (выше
+    процент для более высоких классов) то они будут увольняться, если есть где-нибудь лучше работа (сделать анализаторы)
+    причём если более хорошая работа есть в другом городе, то лишь наиболее сознательные должны переезжать, остальные же
+    только если работа есть в ЭТОМ городе
+    """
+
 
     def __init__(self, location, male_age,female_age, strata,culture,religion, money, unemployed, realnye = True):
 
@@ -262,12 +269,14 @@ class Pops:
                         if self.inventory[i] > 0:
                             eaten += self.inventory[i]/(self.total_num * self.cons[i])
                             self.inventory[i] = 0
-                            self.emigrate = min(self.hungry,1 - eaten)          # если какая-то часть населения дважды не ела, то она частично сдохнет и частично уебёт
-                            if self.emigrate != 0:
+                            self.die = min(self.hungry,1 - eaten)          # если какая-то часть населения дважды не ела, то она частично сдохнет и частично уебёт
+                            #emigrate = 0
+                            if self.die != 0:
                                 for q in range(len(self.male_age)):
-                                    self.male_age[q] -= self.emigrate*self.male_age[q]*0.05
-                                    self.female_age[q] -= self.emigrate*self.female_age[q]*0.05
-                                    self.emigrate * self.male_age[q] * 0.95
+                                    self.male_age[q] -= self.die*self.male_age[q]*0.05
+                                    self.female_age[q] -= self.die*self.female_age[q]*0.05
+                                    #emigrate += self.die*(self.male_age[q] + self.female_age[q])* 0.95
+                            self.emigrate = self.die * self.total_num * 0.95
                             self.hungry = 1 - eaten                             # но так-то можно сделать и трижды, и четырежды и т.д.
 
                             #Pops.migration(self)                               # тут тип если еда есть, но недостаточно
@@ -349,13 +358,9 @@ class Pops:
                     if self.money == 0:
                         flag1 = False
 
-    def leavework(self):
-        """ещё нихуя нет))"""
-        if self.emigrate > 0:
-            print('Migration method')
 
-    #def leavework(self):
-        #if
+    def emigration(self):
+        print('govno')
 
 
 
