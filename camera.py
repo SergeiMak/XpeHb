@@ -1,5 +1,6 @@
 import numpy as np
 import pygame as pg
+import state
 from random import randint
 
 # Необходимо описать что за параметры функций, чтобы было понятно, что происходит 
@@ -34,6 +35,7 @@ def draw(xe,xg,ye,yg,rasst,pribl,Dlina,mm,bg):
                        2: (150,150,150),
                        3: (50,50,50),
                        4: (0,0,0),
+                       5: (120, 150, 0),
                        }
             sw = swithcer[mm[i,j]]
             if bg.get_at(((i - (-xe + xg - somerange)) * pribl,
