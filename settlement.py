@@ -15,13 +15,15 @@ class Settlement:
         self.size = size           # размер города. город будет расти на карте мира. алгоритм уже придумал. руки просто не дошли написать
         mm[coordinates] = 2        # переписываем в координатах города биом основной карты, чтобы сменить биом на городской (и отрисовать это)
         self.area = []             # список с координатами точек города. нужно для его роста на карте
+        self.possible_area = []
         self.grain_fields = []                          ##### тут сделать всё uint16
         self.possible_grain_fields = []
         self.already_calculated = []
         self.area.append([coordinates[0],coordinates[1]])          # собсна добавляем первую точку
-        Settlement.check_surroundings(self,(self.area[0][0],self.area[0][1]),mm)
+        Settlement.check_surroundings(self,(self.area[0][0],self.area[0][1]),mm,self.possible_area)
+        Settlement.check_surroundings_city(self, (self.area[0][0], self.area[0][1]), mm, self.possible_grain_fields)
         self.name = name
-        self.rectangle = pg.Rect((coordinates[0]-1,coordinates[1]-1),(3,3))            # прямоугольник города для глобальной карты
+        self.rectangle = pg.Rect((coordinates[0]-2,coordinates[1]-2),(5,5))            # прямоугольник города для глобальной карты
         self.factories = {}                # все заводы города
         self.facnum = facnum               # количество заводов в городе
         self.serfs_unemployed = serfs      # безработные крестьяне. для каждого завода создаётся свой поп. в него перераспределяются ЭТИ попы, когда находят работу
@@ -57,32 +59,58 @@ class Settlement:
                 sumcube += self.factories[w].gehalt*self.factories[w].gehalt*self.factories[w].gehalt * self.factories[w].notfull
         self.gehsum[pop1.strata.name] = sumcube
 
+    def if_not_full(self):
+        for i in self.factories:
+            if i.fullnum > i.num_workers:
+                i.notfull = 1
+            else:
+                i.notfull = 0
+
     def display_inform(self):
         print('Number: {}. Name: {}'.format(self.number, self.name))
 
-    def check_surroundings(self,coordinates,mm):
+    def check_surroundings(self,coordinates,mm,possible_list):
         if mm[coordinates[0] - 1, coordinates[1]] != 0 and mm[coordinates[0] - 1, coordinates[1]] != 2 and mm[coordinates[0] - 1, coordinates[1]] != 5:
-            if (coordinates[0] - 1, coordinates[1]) not in self.possible_grain_fields:
-                self.possible_grain_fields.append((coordinates[0] - 1, coordinates[1]))
+            if (coordinates[0] - 1, coordinates[1]) not in possible_list:
+                possible_list.append((coordinates[0] - 1, coordinates[1]))
 
         if mm[coordinates[0] + 1, coordinates[1]] != 0 and mm[
             coordinates[0] + 1, coordinates[1]] != 2 and mm[
             coordinates[0] + 1, coordinates[1]] != 5:
-            if (coordinates[0] + 1, coordinates[1]) not in self.possible_grain_fields:
-                self.possible_grain_fields.append((coordinates[0] + 1, coordinates[1]))
+            if (coordinates[0] + 1, coordinates[1]) not in possible_list:
+                possible_list.append((coordinates[0] + 1, coordinates[1]))
 
         if mm[coordinates[0], coordinates[1] - 1] != 0 and mm[
             coordinates[0], coordinates[1] - 1] != 2 and mm[
             coordinates[0], coordinates[1] - 1] != 5:
-            if (coordinates[0], coordinates[1] - 1) not in self.possible_grain_fields:
-                self.possible_grain_fields.append((coordinates[0], coordinates[1] - 1))
+            if (coordinates[0], coordinates[1] - 1) not in possible_list:
+                possible_list.append((coordinates[0], coordinates[1] - 1))
 
         if mm[coordinates[0], coordinates[1] + 1] != 0 and mm[
             coordinates[0], coordinates[1] + 1] != 2 and mm[
             coordinates[0], coordinates[1] + 1] != 5:
-            if (coordinates[0], coordinates[1] + 1) not in self.possible_grain_fields:
-                self.possible_grain_fields.append((coordinates[0], coordinates[1] + 1))
-        #print('Possible', self.possible_grain_fields)
+            if (coordinates[0], coordinates[1] + 1) not in possible_list:
+                possible_list.append((coordinates[0], coordinates[1] + 1))
+
+    def check_surroundings_city(self,coordinates,mm,possible_list):
+        if mm[coordinates[0] - 1, coordinates[1]] != 0 and mm[coordinates[0] - 1, coordinates[1]] != 2:
+            if (coordinates[0] - 1, coordinates[1]) not in possible_list:
+                possible_list.append((coordinates[0] - 1, coordinates[1]))
+
+        if mm[coordinates[0] + 1, coordinates[1]] != 0 and mm[
+            coordinates[0] + 1, coordinates[1]] != 2:
+            if (coordinates[0] + 1, coordinates[1]) not in possible_list:
+                possible_list.append((coordinates[0] + 1, coordinates[1]))
+
+        if mm[coordinates[0], coordinates[1] - 1] != 0 and mm[
+            coordinates[0], coordinates[1] - 1] != 2:
+            if (coordinates[0], coordinates[1] - 1) not in possible_list:
+                possible_list.append((coordinates[0], coordinates[1] - 1))
+
+        if mm[coordinates[0], coordinates[1] + 1] != 0 and mm[
+            coordinates[0], coordinates[1] + 1] != 2:
+            if (coordinates[0], coordinates[1] + 1) not in possible_list:
+                possible_list.append((coordinates[0], coordinates[1] + 1))
 
 
     def check_to_delete(self,coordinates,mm):
@@ -96,25 +124,32 @@ class Settlement:
         if mm[coordinates[0] - 1, coordinates[1]] != 0 and mm[coordinates[0] - 1, coordinates[1]] != 2 and mm[coordinates[0] - 1, coordinates[1]] != 5:
             if (coordinates[0] - 1, coordinates[1]) not in self.possible_grain_fields:
                 self.possible_grain_fields.append((coordinates[0] - 1, coordinates[1]))
+            if (coordinates[0] - 1, coordinates[1]) not in self.possible_area:
+                self.possible_area.append((coordinates[0] - 1, coordinates[1]))
 
         if mm[coordinates[0] + 1, coordinates[1]] != 0 and mm[
             coordinates[0] + 1, coordinates[1]] != 2 and mm[
             coordinates[0] + 1, coordinates[1]] != 5:
             if (coordinates[0] + 1, coordinates[1]) not in self.possible_grain_fields:
                 self.possible_grain_fields.append((coordinates[0] + 1, coordinates[1]))
+            if (coordinates[0] + 1, coordinates[1]) not in self.possible_area:
+                self.possible_area.append((coordinates[0] + 1, coordinates[1]))
 
         if mm[coordinates[0], coordinates[1] - 1] != 0 and mm[
             coordinates[0], coordinates[1] - 1] != 2 and mm[
             coordinates[0], coordinates[1] - 1] != 5:
             if (coordinates[0], coordinates[1] - 1) not in self.possible_grain_fields:
                 self.possible_grain_fields.append((coordinates[0], coordinates[1] - 1))
+            if (coordinates[0], coordinates[1] - 1) not in self.possible_area:
+                self.possible_area.append((coordinates[0], coordinates[1] - 1))
 
         if mm[coordinates[0], coordinates[1] + 1] != 0 and mm[
             coordinates[0], coordinates[1] + 1] != 2 and mm[
             coordinates[0], coordinates[1] + 1] != 5:
             if (coordinates[0], coordinates[1] + 1) not in self.possible_grain_fields:
                 self.possible_grain_fields.append((coordinates[0], coordinates[1] + 1))
-        #print('Possible', self.possible_grain_fields)
+            if (coordinates[0], coordinates[1] + 1) not in self.possible_area:
+                self.possible_area.append((coordinates[0], coordinates[1] + 1))
 
 
     def city_growth(self,mm,background,gm):
@@ -122,7 +157,7 @@ class Settlement:
             self.size  += 1
             if self.size > 3:
                 self.city = True
-            newlands = []
+            """newlands = []
             for i in range(len(self.area)):
                 if mm[self.area[i][0]-1,self.area[i][1]] != 0 and mm[self.area[i][0]-1,self.area[i][1]] != 2:           # и надо будет позже ещё учесть горы и иные биомы
                     newlands.append((self.area[i][0]-1,self.area[i][1]))
@@ -134,23 +169,25 @@ class Settlement:
                     newlands.append((self.area[i][0],self.area[i][1]-1))
 
                 if mm[self.area[i][0],self.area[i][1]+1] != 0 and mm[self.area[i][0],self.area[i][1]+1] != 2:
-                    newlands.append((self.area[i][0],self.area[i][1]+1))
-            randchoice = random.choice(newlands)
-            print('City growing, coordinates',randchoice)
-            if mm[randchoice[0],randchoice[1]] == 5 and [randchoice[0],randchoice[1]] in self.grain_fields:
-                index123 = self.grain_fields.index([randchoice[0],randchoice[1]])
-                del self.grain_fields[index123]
+                    newlands.append((self.area[i][0],self.area[i][1]+1))"""
+            if self.possible_area:
+                randchoice = random.choice(self.possible_area)
+                if mm[randchoice[0],randchoice[1]] == 5 and [randchoice[0],randchoice[1]] in self.grain_fields:
+                    index123 = self.grain_fields.index([randchoice[0],randchoice[1]])
+                    del self.grain_fields[index123]
 
-            mm[randchoice[0],randchoice[1]] = 2
-            self.area.append([randchoice[0],randchoice[1]])
-            background.set_at((randchoice[0],randchoice[1]), (50, 50, 50))
+                mm[randchoice[0],randchoice[1]] = 2
+                self.area.append([randchoice[0],randchoice[1]])
+                background.set_at((randchoice[0],randchoice[1]), (50, 50, 50))
+                Settlement.check_surroundings_city(self, randchoice, mm, self.possible_area)
+                index1 = self.possible_area.index(randchoice)
+                del self.possible_area[index1]
             """ОПОСЛЯ ЭТОГО НАДО ПРОВЕРИТЬ НАЛИЧИЕ ДРУГИХ ГОРОДОВ ПО СОСЕДСТВУ С 
             НОВОЙ КЛЕТКОЙ И ЕСЛИ ТАКОЙ ГОРОД ЕСТЬ, ТО ИХ НУЖНО СОЕДИНИТь"""
         for i in self.factories:
             if i.good.name == 'Grain':
-                if i.serf_average_effectiveness >= self.state.serf_land_right_per_capita and not self.state.serf_land_right_per_capita:
+                if i.serf_average_effectiveness >= self.state.serf_land_right_per_capita and self.state.serf_land_right_per_capita:
                     if len(self.grain_fields) < i.num_workers*self.state.serf_land_right_per_capita:# тут надо очень внимательно смотреть на коэффициенты. переделать скорее всего
-                        #print('Число рабочих, права', i.num_workers, self.state.serf_land_right_per_capita)
                         for diff in range(int(round(i.num_workers*self.state.serf_land_right_per_capita - len(self.grain_fields) + 0.5))): # округляем в бОльшую сторону
                             if self.possible_grain_fields:
                                 res_max = -1
@@ -161,7 +198,7 @@ class Settlement:
 
                                 mm[resource_coord] = 5
                                 self.grain_fields.append(resource_coord)
-                                Settlement.check_surroundings(self,resource_coord,mm)
+                                Settlement.check_surroundings(self,resource_coord,mm,self.possible_grain_fields)
                                 background.set_at(resource_coord, (120, 150, 0))
                                 index1 = self.possible_grain_fields.index(resource_coord)
                                 del self.possible_grain_fields[index1]
@@ -193,7 +230,7 @@ class Settlement:
 
                                 mm[resource_coord] = 5
                                 self.grain_fields.append(resource_coord)
-                                Settlement.check_surroundings(self, resource_coord, mm)
+                                Settlement.check_surroundings(self, resource_coord, mm,self.possible_grain_fields)
                                 background.set_at(resource_coord, (120, 150, 0))
                                 index1 = self.possible_grain_fields.index(resource_coord)
                                 del self.possible_grain_fields[index1]

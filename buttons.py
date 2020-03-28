@@ -15,9 +15,8 @@ class Button(GameObject):
         self.rctngl = pg.Rect(x,y,w,h)
         self.state = 'normal'
         self.on_click = on_click
-        
-        # ?
-        #self.text =
+
+        self.text =
 
     def draw(self, surface):
         pygame.draw.rect(surface,
