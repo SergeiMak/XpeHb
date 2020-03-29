@@ -4,8 +4,8 @@ import strata
 from settlement import Settlement
 import pygame as pg
 import goods
-import pops
-import factory
+from pops import Pops
+from factory import Factory
 import state
 import culture
 import religion
@@ -191,7 +191,7 @@ def main():
     
     # болванчик для того, чтоб создать город (он привязывается к населению)
     # но такое у меня чувство, что я эту механику уберу
-    bolvan = pops.Pops(15,male_age,female_age,serf,pakistani,sunni,100,1,0,False)     
+    bolvan = Pops(15,male_age,female_age,serf,pakistani,sunni,100,1,0,False)     
 
     # тестовые города
     city = Settlement(state1,(50,60),biomMap,'Gasovodsk',bolvan,schoolers)     
@@ -206,19 +206,19 @@ def main():
 
 
     # назначаем попы - pop - экземпляр "единицы" населения
-    pops.Pops(Settlement.cities['Zernograd'], male_age.copy(),female_age.copy(), serf,pakistani,sunni, 100,1)   
-    pops.Pops(Settlement.cities['Gasovodsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
-    pops.Pops(Settlement.cities['Gorod1'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
-    pops.Pops(Settlement.cities['Gorod2'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
-    pops.Pops(Settlement.cities['Gorod3'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
-    pops.Pops(Settlement.cities['Gorny'],male_age.copy(),female_age.copy(),worker,pakistani,sunni,100,1)
+    Pops(Settlement.cities['Zernograd'], male_age.copy(),female_age.copy(), serf,pakistani,sunni, 100,1)   
+    Pops(Settlement.cities['Gasovodsk'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
+    Pops(Settlement.cities['Gorod1'],male_age.copy(),female_age.copy(),serf,pakistani,sunni,100,1)
+    Pops(Settlement.cities['Gorod2'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
+    Pops(Settlement.cities['Gorod3'], male_age.copy(),female_age.copy(),serf,pakistani,sunni, 100, 1)
+    Pops(Settlement.cities['Gorny'],male_age.copy(),female_age.copy(),worker,pakistani,sunni,100,1)
     # назначаем заводы
-    factory.Factory(Settlement.cities['Zernograd'], serf, grain, 200, 1, 1000, 0,True)     
-    factory.Factory(Settlement.cities['Gasovodsk'],serf,grain,200,1,1000,0,True)
-    factory.Factory(Settlement.cities['Gorod1'], serf, fertilizer, 1000, 1, 1000)
-    factory.Factory(Settlement.cities['Gorod2'],serf,fish,200,1,1000,0,True)
-    factory.Factory(Settlement.cities['Gorod3'], serf, fertilizer, 1000, 1, 1000)
-    factory.Factory(Settlement.cities['Gorny'],worker,iron,1000,1,1000)
+    Factory(Settlement.cities['Zernograd'], serf, grain, 200, 1, 1000, 0,True)     
+    Factory(Settlement.cities['Gasovodsk'],serf,grain,200,1,1000,0,True)
+    Factory(Settlement.cities['Gorod1'], serf, fertilizer, 1000, 1, 1000)
+    Factory(Settlement.cities['Gorod2'],serf,fish,200,1,1000,0,True)
+    Factory(Settlement.cities['Gorod3'], serf, fertilizer, 1000, 1, 1000)
+    Factory(Settlement.cities['Gorny'],worker,iron,1000,1,1000)
 
     # Инициализация pygame
     pg.init()
@@ -373,8 +373,8 @@ def main():
                             Settlement.subiomMapakubow(Settlement.cities[i],Settlement.cities[i].pops[pop_index])     # считаем нормировку для коэффициентов распределения попов по заводам
                             for factory_index in Settlement.cities[i].factories:             # распределяем по этим заводам, которые все находятся в этом городе
                                 if k.work_type == Settlement.cities[i].pops[pop_index].strata:     # проверка, подходит ли завод типу попа. ибо священники на заводах не въёбывают
-                                    factory.Factory.coef(Settlement.cities[i].factories[factory_index])     # считаем коэффициенты
-                                pops.Pops.facsearch(Settlement.cities[i].pops[pop_index])     # непосредственно распределяем население попа в соответствии с коэффициентами
+                                    Factory.coef(Settlement.cities[i].factories[factory_index])     # считаем коэффициенты
+                                Pops.facsearch(Settlement.cities[i].pops[pop_index])     # непосредственно распределяем население попа в соответствии с коэффициентами
 
         #######################################
         """ if xt == 1000:
@@ -403,11 +403,11 @@ def main():
             trecksell = {}
             for i in Settlement.cities:                       # по всем городам
                 for j in Settlement.cities[i].factories:     # и заводам в этих городах
-                    factory.Factory.factbuy(j)                       # завод покупает нужные ресурсы
-                    factory.Factory.factboostbuy(j)                  # и бустеры (типа удобрения для С/Х)
-                    factory.Factory.popbuy(j)                       # и жратву своим рабочим и тд
+                    Factory.factbuy(j)                       # завод покупает нужные ресурсы
+                    Factory.factboostbuy(j)                  # и бустеры (типа удобрения для С/Х)
+                    Factory.popbuy(j)                       # и жратву своим рабочим и тд
                 for j in Settlement.cities[i].pops:     # теперь для попов
-                    pops.Pops.popbuy(j)                    # покупают жрачку и т.д.
+                    Pops.popbuy(j)                    # покупают жрачку и т.д.
 
 
         if (xt-30)//100 - weekpricechanging > 0:
@@ -417,14 +417,14 @@ def main():
             for i in Settlement.cities:
                 for j in Settlement.cities[i].factories:
                     if j.type:           # отдаю деньги и жратву крестьянам.
-                        factory.Factory.givefoodmoney(j)
-                        factory.Factory.wage_change(j)
+                        Factory.givefoodmoney(j)
+                        Factory.wage_change(j)
                     if 1 in j.price_changed.values():
-                        factory.Factory.pricechangeagain(j)
+                        Factory.pricechangeagain(j)
                     elif 2 in j.price_changed.values():
-                        factory.Factory.pricechangeagain(j)
+                        Factory.pricechangeagain(j)
                     else:
-                        factory.Factory.pricechange(j)
+                        Factory.pricechange(j)
 
 
         if (xt-50)//100 - weekproduction > 0:
@@ -433,7 +433,7 @@ def main():
             weekproduction += 1
             for i in Settlement.cities:
                 for j in Settlement.cities[i].factories:
-                    factory.Factory.create(Settlement.cities[i].factories[j],grainMap)
+                    Factory.create(Settlement.cities[i].factories[j],grainMap)
 
 
 
@@ -444,10 +444,10 @@ def main():
             for i in Settlement.cities:
                 for j in Settlement.cities[i].factories:
                     if j.num_workers != 0:
-                        factory.Factory.consume_food(j)
+                        Factory.consume_food(j)
                 for j in Settlement.cities[i].pops:
                     if j.num != 0:
-                        pops.Pops.consume_food(Settlement.cities[i].pops[j])
+                        Pops.consume_food(Settlement.cities[i].pops[j])
 
         if (xt-95)//100 - weekcorrections > 0:
             """корректировка населения. смерть-рождение"""
@@ -457,7 +457,7 @@ def main():
                 iter_for_pops = list(Settlement.cities[i].pops) # этот лист ввёл ибо удаляются пустые попы в процессе
                 for j in iter_for_pops:
                     if not Settlement.cities[i].pops[j].unemployed:
-                        pops.Pops.popchange(Settlement.cities[i].pops[j])
+                        Pops.popchange(Settlement.cities[i].pops[j])
 
                         if Settlement.cities[i].pops[j].total_num == 0:                            # удаляем пустые попы. чтоб память не жрали
                             Settlement.cities[i].pops[j].location.state.money += Settlement.cities[i].pops[j].money           # перемещаем их деньги и инвентарь в казну
@@ -470,7 +470,7 @@ def main():
                 iter_for_pops = list(Settlement.cities[i].pops)
                 for j in iter_for_pops:
                     if Settlement.cities[i].pops[j].unemployed:
-                        pops.Pops.popchange(Settlement.cities[i].pops[j])
+                        Pops.popchange(Settlement.cities[i].pops[j])
 
                         if Settlement.cities[i].pops[j].total_num == 0:  # удаляем пустые попы. чтоб память не жрали
                             Settlement.cities[i].pops[j].location.state.money += Settlement.cities[i].pops[
