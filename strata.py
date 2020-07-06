@@ -1,4 +1,5 @@
 import pops
+import state
 
 """
 КЛАССЫ У НАСЕЛЕНИЯ (КРЕСТЬЯНЕ, РАБОЧИЕ, СВЯЩЕННИКИ И ТД)
@@ -13,20 +14,24 @@ class Strata:
     Str_number = 0
     strSlovar = {}
 
-    def __init__(self, name,brate,cons123,consnf):
+    def __init__(self, name,state,birth_rate,cons123,consnf):
         self.name = name
+        self.state = state
         Strata.Str_number  += 1
 
         self.number = Strata.Str_number
         self.cons = cons123             # типа то, что жрёт поп этого класса
         self.cons_notfood = consnf               # что потребляет не из еды
-        self.birth_rate = brate                      # тип разная скорость воспроизводства у профессоров и голожопых крестьян. но для 19 века это неправда :(
+        self.birth_rate = birth_rate                      # тип разная скорость воспроизводства у профессоров и голожопых крестьян. но для 19 века это неправда :(
         Strata.strSlovar[self] = self
+        self.factories_in_strata = []
+        state.strats[self] = self.name
 
 
-def Existing_Strat():
-    serf = Strata('Serf',1,{'Grain':1,'Fish':1},{'Clothes':1})
-    worker = Strata('Worker',1,{'Grain':1,'Fish':1},{'Clothes':1})
-    soldier = Strata('Soldier',0,{'Grain':1,'Fish':1},{'Clothes':1})
-    schoolers = Strata('Schooler',0.7,{'Grain':1,'Fish':1},{'Clothes':1})
-    return serf, worker, soldier,schoolers
+def Existing_Strat(state):
+    serf = Strata('Serf',state,1,{'Grain':1,'Fish':1},{'Clothes':1})
+    worker = Strata('Worker',state,1,{'Grain':1,'Fish':1},{'Clothes':1})
+    soldier = Strata('Soldier',state,0,{'Grain':1,'Fish':1},{'Clothes':1})
+    schoolers = Strata('Schooler',state,0.7,{'Grain':1,'Fish':1},{'Clothes':1})
+    enterpreneurs = Strata('Enterpreneur',state, 1,{'Grain':1,'Fish':1},{'Clothes':1})
+    return serf, worker, soldier,schoolers, enterpreneurs

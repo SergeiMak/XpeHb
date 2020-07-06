@@ -5,6 +5,12 @@
 import goods
 import strata
 import numpy as np
+import settlement
+import factory
+import state
+import rivers
+from random import choice
+from math import ceil
 
 class Pops:
     """надо будет сделать (что, впрочем, не сильно сложно) преобразователь типов данных и везде  его повставлять
@@ -69,6 +75,12 @@ class Pops:
         self.hungry = 0
         #self.num = 0
         self.total_num = sum(self.male_age) + sum(self.female_age)                       # вестимо суммарно
+
+        location.state.pops_for_opt[location.state.last_added_pops_day - 1].append(self)
+        location.state.last_added_pops_day += 1
+        if location.state.last_added_pops_day == 8:
+            location.state.last_added_pops_day = 1
+        location.state.pops_for_breeding.append(self)
 
     # тут надо будет переделать рождение с коэффициентами по богатству
     def popchange(self):
@@ -180,7 +192,7 @@ class Pops:
                 prol_sum = sum(self.employment.values())    # считаем, сколько всего людей в попе уже работает
                 gotovo = (self.num - prol_sum) * self.location.factories[q].coef
                 """рассматриваем разные варианты: готов ли принять завод столько рабочих?
-                перемещаются в поп завода, кстати, рабочие прямо с детьми и жёнами"""
+                перемещаются в поп завода, кстати, рабочие прямо с детьми и жёнами - эта строчка устарела. поп остаётся на месте и его обитатели тоже"""
                 #shortname = self.location.factories[q].workers_dict
                 not_found = True
 
@@ -224,49 +236,49 @@ class Pops:
         """
         obj = strata.Strata.strSlovar[self.strata]
         workers = sum(self.employment.values())
-
-        bezdelniki = self.total_num * (1 - workers / self.num)
-        quant123 = 0
-        fooddict = obj.cons.copy()         # копируем словарь того, что поп в принципе может жрать
-        notfound123 = True                   # вспомогательная штука для выхода из цикла вайл
-        for i in obj.cons:                  # пересчитываем, что в инвентаре вообще есть пожрать
-            if self.inventory[i] > 0:
-                quant123 += 1
+        if self.num > 0:
+            bezdelniki = self.total_num * (1 - workers / self.num)
+            quant123 = 0
+            fooddict = obj.cons.copy()         # копируем словарь того, что поп в принципе может жрать
+            notfound123 = True                   # вспомогательная штука для выхода из цикла вайл
+            for i in obj.cons:                  # пересчитываем, что в инвентаре вообще есть пожрать
+                if self.inventory[i] > 0:
+                    quant123 += 1
+                else:
+                    fooddict.pop(i)                  # если чего-то нет, то мы удаляем это из скопированного словаря
+    
+            if quant123 == 0:                        # если нихуя нет пожрать, то дохнут
+                for q in range(len(self.male_age)):
+                    self.male_age[q] -= int(0.05 * self.male_age[q] * (1 - workers / self.num))
+                    self.female_age[q] -= int(0.05 * self.female_age[q] * (1 - workers / self.num))
+    
             else:
-                fooddict.pop(i)                  # если чего-то нет, то мы удаляем это из скопированного словаря
-
-        if quant123 == 0:                        # если нихуя нет пожрать, то дохнут
-            for q in range(len(self.male_age)):
-                self.male_age[q] -= int(0.05 * self.male_age[q] * (1 - workers / self.num))
-                self.female_age[q] -= int(0.05 * self.female_age[q] * (1 - workers / self.num))
-
-        else:
-            while notfound123:   # распределяем жрачку по потреблению. чтоб съел либо 1 буханку хлеба, либо полбуханки и полпалки колбасы, либо треть одного, треть второго и треть третьего продукта
-                fooddict, quant123, notfound123 = Pops.consume_exclude(self,fooddict,quant123,obj,bezdelniki)
-                if quant123 == 0:
-                    eaten = 0
-                    for i in obj.cons:
-                        if self.inventory[i] > 0:
-                            eaten += self.inventory[i]/(bezdelniki * obj.cons[i])
-                            self.inventory[i] = 0
-                            self.die = min(self.hungry,1 - eaten)          # если какая-то часть населения дважды не ела, то она частично сдохнет и частично уебёт
-                            #emigrate = 0
-                            if self.die != 0:
-                                for q in range(len(self.male_age)):
-                                    self.male_age[q] -= int(self.die*self.male_age[q]*0.05*(1 - workers / self.num))
-                                    self.female_age[q] -= int(self.die*self.female_age[q]*0.05*(1 - workers / self.num))
-                                    #emigrate += self.die*(self.male_age[q] + self.female_age[q])* 0.95
-                            self.emigrate = self.die * self.total_num * 0.95*(1 - workers / self.num)
-                            self.hungry = 1 - eaten                             # но так-то можно сделать и трижды, и четырежды и т.д.
-
-                            #Pops.migration(self)                               # тут тип если еда есть, но недостаточно
-                                                                                # тогда эмиграция или ещё что. пока не продумал до конца
-
-
-
-                elif notfound123 == False:                   # если нашли достаточно продуктов для потребления - стопаем цикл и жрём
-                    for i in fooddict:
-                        self.inventory[i] -= (bezdelniki * obj.cons[i])/quant123
+                while notfound123:   # распределяем жрачку по потреблению. чтоб съел либо 1 буханку хлеба, либо полбуханки и полпалки колбасы, либо треть одного, треть второго и треть третьего продукта
+                    fooddict, quant123, notfound123 = Pops.consume_exclude(self,fooddict,quant123,obj,bezdelniki)
+                    if quant123 == 0:
+                        eaten = 0
+                        for i in obj.cons:
+                            if self.inventory[i] > 0:
+                                eaten += self.inventory[i]/(bezdelniki * obj.cons[i])
+                                self.inventory[i] = 0
+                                self.die = min(self.hungry,1 - eaten)          # если какая-то часть населения дважды не ела, то она частично сдохнет и частично уебёт
+                                #emigrate = 0
+                                if self.die != 0:
+                                    for q in range(len(self.male_age)):
+                                        self.male_age[q] -= int(self.die*self.male_age[q]*0.05*(1 - workers / self.num))
+                                        self.female_age[q] -= int(self.die*self.female_age[q]*0.05*(1 - workers / self.num))
+                                        #emigrate += self.die*(self.male_age[q] + self.female_age[q])* 0.95
+                                self.emigrate = self.die * self.total_num * 0.95*(1 - workers / self.num)
+                                self.hungry = 1 - eaten                             # но так-то можно сделать и трижды, и четырежды и т.д.
+    
+                                #Pops.migration(self)                               # тут тип если еда есть, но недостаточно
+                                                                                    # тогда эмиграция или ещё что. пока не продумал до конца
+    
+    
+    
+                    elif notfound123 == False:                   # если нашли достаточно продуктов для потребления - стопаем цикл и жрём
+                        for i in fooddict:
+                            self.inventory[i] -= (bezdelniki * obj.cons[i])/quant123
 
     def consume_exclude(self,fooddict,quant123,obj,bezdelniki):
         """вспомогательная функция для исключения того, чего слишком мало для пожирания"""
@@ -293,60 +305,118 @@ class Pops:
         после этого просто покупаем у того, кто суммарно дешевле продаст. если не хватило - покупаем у следующего. и т.д.
         :return:
         """
+        
+        """ТУТ ПОКУПАЮТ БЕЗРАБОТНЫЕ"""
 
         roadcoef = 0.1
         obj = strata.Strata.strSlovar[self.strata]
         workers = sum(self.employment.values())
-
-        bezdelniki = self.total_num * (1 - workers / self.num)
-        for i in obj.cons:
-            pricedict = goods.Goods.gddict[i].prices.copy()
-            for j in pricedict:
-                pricedict[j] = pricedict[j] * (1 + roadcoef * np.sqrt((j.location.area[0][0] - self.location.area[0][0])**2 +
-                                                 (j.location.area[0][1] - self.location.area[0][1])**2))
-
-            flag1 = True
-            if self.inventory[i] < obj.cons[i] * bezdelniki and self.money > 0:
-                while flag1:
-                    minpr = min(pricedict, key=pricedict.get)
-                    #buylist.append(minpr)
-                    if minpr.sell[i] >= obj.cons[i]*bezdelniki:
-                        if self.money >= pricedict[minpr]*obj.cons[i]*bezdelniki:
-                            minpr.money += pricedict[minpr]*obj.cons[i]*bezdelniki
-                            self.money -= pricedict[minpr]*obj.cons[i]*bezdelniki
-                            self.inventory[i] += obj.cons[i]*bezdelniki
-                            minpr.sell[i] -= obj.cons[i]*bezdelniki
+        print('РАБОТНИЧКИ ',workers, self.num, self.total_num)
+        if self.num > 0:
+            bezdelniki = int(self.total_num * (1 - workers / self.num))
+            for i in obj.cons:
+                pricedict = goods.Goods.gddict[i].prices.copy()
+                for j in pricedict:
+                    pricedict[j] = pricedict[j] * (1 + roadcoef * np.sqrt((j.location.area[0][0] - self.location.area[0][0])**2 +
+                                                     (j.location.area[0][1] - self.location.area[0][1])**2))
+    
+                flag1 = True
+                if self.inventory[i] < obj.cons[i] * bezdelniki and self.money > 0:
+                    while flag1:
+                        minpr = min(pricedict, key=pricedict.get)
+                        #buylist.append(minpr)
+                        if minpr.sell[i] > obj.cons[i]*bezdelniki:
+                            if self.money > pricedict[minpr]*obj.cons[i]*bezdelniki:
+                                minpr.money += pricedict[minpr]*obj.cons[i]*bezdelniki
+                                self.money -= pricedict[minpr]*obj.cons[i]*bezdelniki
+                                self.inventory[i] += obj.cons[i]*bezdelniki
+                                minpr.sell[i] -= obj.cons[i]*bezdelniki
+                            else:
+                                if self.money > 0:
+                                    minpr.money += self.money
+                                    self.inventory[i] += self.money/pricedict[minpr]
+                                    minpr.sell[i] -= self.money/pricedict[minpr]
+                                    self.money -= self.money
                         else:
-                            if self.money > 0:
-                                minpr.money += self.money
-                                self.inventory[i] += self.money/pricedict[minpr]
-                                minpr.sell[i] -= self.money/pricedict[minpr]
-                                self.money -= self.money
-                    else:
-                        if self.money >= pricedict[minpr]*minpr.sell[i]:
-                            minpr.money += pricedict[minpr]*minpr.sell[i]
-                            self.money -= pricedict[minpr]*minpr.sell[i]
-                            self.inventory[i] += minpr.sell[i]
-                            minpr.sell[i] -= minpr.sell[i]
-                        else:
-                            if self.money > 0:
-                                minpr.money += self.money
-                                self.inventory[i] += self.money/pricedict[minpr]
-                                minpr.sell[i] -= self.money/pricedict[minpr]
-                                self.money -= self.money
-                    if obj.cons[i]*bezdelniki <= self.inventory[i]:
-                        flag1 = False
-                    pricedict.pop(minpr)
-                    if not pricedict:
-                        flag1 = False
-                    if self.money == 0:
-                        flag1 = False
+                            if self.money > pricedict[minpr]*minpr.sell[i]:
+                                minpr.money += pricedict[minpr]*minpr.sell[i]
+                                self.money -= pricedict[minpr]*minpr.sell[i]
+                                self.inventory[i] += minpr.sell[i]
+                                minpr.sell[i] -= minpr.sell[i]
+                            else:
+                                if self.money > 0:
+                                    minpr.money += self.money
+                                    self.inventory[i] += self.money/pricedict[minpr]
+                                    minpr.sell[i] -= self.money/pricedict[minpr]
+                                    self.money -= self.money
+                        if obj.cons[i]*bezdelniki < self.inventory[i]:
+                            flag1 = False
+                        pricedict.pop(minpr)
+                        if not pricedict:
+                            flag1 = False
+                        if self.money == 0:
+                            flag1 = False
 
+    def countmoney(self):
+        mon = 0
+        eff_list = {}
+        for i in self.employment:
+            mon += i.workers_money*self.employment[i]/i.num_workers
+            eff_list[i] = i.workers_money/self.employment[i]
+            
+        return mon, eff_list
 
-    def emigration(self):
-        #analiser plus make for
-        print('govno')
+    def emigration(self,state1,mm,grain):
+        """
+        НАДО БУДЕТ ЕЩЁ ВВОДИТЬ КОРРЕКЦИИ
+        
+        ТУТ СОЗДАНИЕ ПОСЕЛЕНИЕ ПРИ ЭМИГРАЦИИ
+        :param state1:
+        :param mm:
+        :param serf:
+        :param grain:
+        :return:
+        """
+        if (self.num - sum(self.employment.values())) > 40:
+            nameslist = ['1','2','3','4','5','6','7','8','9']
+            #coordin = (rivers.River.places.get(kl) for kl in rivers.River.places.values())
+            for coun in rivers.River.places:
+                if rivers.River.places[coun] == max(rivers.River.places.values()):
+                    coordin = coun
+            #coordin = rivers.River.places.get(max(rivers.River.places.values()))
+            # удалять или не удалять место у реки? может, удалить, а потом просто несколько позже сделать опять пересчёт мест?
+            rivers.River.places.pop(coordin)
+            print("КООРДИНАТА ",coordin, max(rivers.River.places.values()))
+            namechoice = choice(nameslist) + choice(nameslist) + choice(nameslist) + choice(nameslist) + choice(nameslist)
+            settlement.Settlement(state1, coordin , mm, namechoice)
+            koeff =  (1 - sum(self.employment.values()) / self.num)/2
+            numgo = int(self.total_num * koeff)
+            money  = self.money
+            """тут скорее всего придётся как-то иначе копировать и применять ко всем элементам"""
+            male_age = self.male_age.copy()
+            print(male_age)
+            for i12 in range(len(male_age)):
+                male_age[i12] = ceil(male_age[i12]* koeff)
+                self.male_age[i12] -= male_age[i12]
+            print(male_age, self.male_age)
+            # male_age = (int(male_age11* koeff), for male_age11 in male_age)             # вот это вообще хуйня. смотреть жёлтую пометку copy() ниже
+            # self.male_age = ((self.male_age[i12] - male_age[i12]) for i12 in range(len(male_age)))
 
+            female_age = self.female_age.copy()
+            for i12 in range(len(female_age)):
+                female_age[i12] = ceil(female_age[i12]* koeff)
+                self.female_age[i12] -= female_age[i12]                 # ТУТ ПОТЕНЦИАЛЬНО МОЖЕТ ВОЗНИКНУТЬ ОТРИЦАТЕЛЬНОЕ НАСЕЛЕНИЕ НО ВРОДЕ НЕ ДОЛЖНО
+            # female_age = (int(female_age11* koeff) for female_age11 in female_age)
+            # self.female_age = ((self.female_age[i12] - female_age[i12]) for i12 in range(len(female_age)))
+            
+            """надо переносить всё имущество"""
+            
+            Pops(settlement.Settlement.slovar[namechoice], male_age.copy(), female_age.copy(), self.strata, self.culture,
+                      self.religion, 100, 1)
+            factory.Factory(settlement.Settlement.slovar[namechoice],self.strata,grain,self.money + state1.subsidise_new_settlements,1,1000,0,True)
+            """polovina doljna ujti"""
+            
+            
     """
     def teen_go(self,age):
         shortname = self.location.pops

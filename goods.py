@@ -29,4 +29,6 @@ def existing_goods():
     whool = Goods('Whool')
     fabric = Goods('Fabric')
     iron = Goods('Iron')
-    return grain, fertilizer, fish, whool, fabric, iron
+    instruments = Goods('Instruments')
+    wood = Goods('Wood')
+    return grain, fertilizer, fish, whool, fabric, iron, instruments, wood

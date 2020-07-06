@@ -45,10 +45,10 @@ class Factory:
     Fact_number = 0
     slovar = dict()                          # словарь всех заводов. вот только нахуя?
 
-    def __init__(self, location, work_type, good, money,gehalt,fullnum, num_workers = 0,type=0):
+    def __init__(self, location, work_type, good, money,gehalt,fullnum, num_workers = 0,type=0, resource_map = False):
         self.location = location                         # где завод располагается, в каком городе
         self.work_type = work_type                               # чей труд применяется? крестьян? рабочих? учителей?
-
+        self.resource_map = resource_map
         self.good = good                             # по сути тип завода
         self.money = money                                  # деньги завода
         self.workers_money = 0      # деньги всех работников совместно (хранятся на заводе)
@@ -71,6 +71,7 @@ class Factory:
         self.boosterbonus = {}                           # какой бонус даёт в итоге бустер
         self.buyingcoef = {}                         # УСТАРЕВШАЯ ХУЙНЯ
         self.price_changed = {}                          # как изменилась с прошлого изменения цен цена? увеличилась или уменьшилась?
+        self.price_kept_changing = {}
         self.soldprevious = {}                               # сколько в прошлый раз продали товара (в единицах)
         self.wage_changed = 1
         self.money_before = 0
@@ -78,12 +79,16 @@ class Factory:
             self.serf_average_effectiveness = 1     # сколько может 1 работник обрабатывать земли. если ему предоставляют её в достаточном количестве
 
         self.workers_dict = {}        # хранятся все попы, часть населения которых работает на этом заводе. сопоставляются {Сам_поп: True}
+        """надо дополнить систему покупки/потребления для предпренимателей, чтобы учесть невыгодность определённых товаров"""
         self.num_workers = 0              # абсолютное количество рабочих
         self.previous_num_w = 0
         self.unpaid = 0
         for key in self.workers_dict:
             #self.num_workers += key.num                           # количество уже нанятых трудяг
             self.num_workers += key.employment[self]
+        if self.work_type.name == 'Enterpreneur':
+            self.wt_dict = {}  # для предпринимателей словарь "производимый товар":"сколько человек производит"
+
         Factory.types(self)                                  # метод заполняет для этого завода sell, buy, boost, usage и так далее. в зависимости от типа завода
         Factory.setgoodsforpricechange(self)                     # вспомогательная хрень для изменения цены. типа поставить, что они ни на что пока ещё не менялись
 
@@ -98,12 +103,46 @@ class Factory:
         Factory.Fact_number  += 1
         Factory.slovar[self.number] = self                   # записываем в общий словарь заводов
         good.prices[self] = self.startingprice                       # записываем в словарь продаваемого товара свою цену
+        self.prices_history = np.zeros(20)
+        if isinstance(resource_map,list):
+            """присвоение заводу железа/любой другой добывающей хуйни близлежащие источники ресурса"""
+            self.sources = {}           # здесь хранятся координаты и значение источника
+            self.radius = 5             # в этом радиусе ищем
+            print(self.location.area)
+            for i in range(2*self.radius):
+                for j in range(2*self.radius):
+                    if resource_map[self.location.area[0][0]+i-self.radius,self.location.area[0][1]+j-self.radius] != 0:
+                        self.sources[(self.location.area[0][0]+i-self.radius,self.location.area[0][1]+j-self.radius)] = resource_map[self.location.area[0][0]+i-self.radius,self.location.area[0][1]+j-self.radius]
+                        
+                        
+        location.state.factories[location.state.last_added_factory_day - 1].append(self)
+        # if location.state.last_added_factory_day == 1:
+        #     location.state.factories_monday.append(self)
+        # elif location.state.last_added_factory_day == 2:
+        #     location.state.factories_tuesday.append(self)
+        # elif location.state.last_added_factory_day == 3:
+        #     location.state.factories_wednesday.append(self)
+        # elif location.state.last_added_factory_day == 4:
+        #     location.state.factories_thursday.append(self)
+        # elif location.state.last_added_factory_day == 5:
+        #     location.state.factories_friday.append(self)
+        # elif location.state.last_added_factory_day == 6:
+        #     location.state.factories_saturday.append(self)
+        # elif location.state.last_added_factory_day == 7:
+        #     location.state.factories_sunday.append(self)
+        location.state.last_added_factory_day += 1
+        if location.state.last_added_factory_day == 8:
+            location.state.last_added_factory_day = 1
+            
+        self.work_type.factories_in_strata.append(self)
+
 
     def setgoodsforpricechange(self):
         """вспомогательная хрень для изменения цены. типа поставить, что они ни на что пока ещё не менялись
         """
         for i in self.sell:
             self.price_changed[i] = 0
+            self.price_kept_changing[i] = 0
 
     def types(self):
         """
@@ -115,6 +154,9 @@ class Factory:
             self.sell['Fish'] = 0
             self.effectiveness['Fish'] = 5
             self.bonuses['Fish'] = 0
+            self.boosterusage['Instruments'] = 0.01
+            self.booster['Instruments'] = 1
+            self.boosterbonus['Instruments'] = 1.5
             self.startingprice = 1
 
         if self.good.name == 'Grain':
@@ -125,6 +167,9 @@ class Factory:
             self.bonuses['Grain'] = 0
             #self.usage['Fertilizer'] = 1
             self.boosterusage['Fertilizer'] = 1
+            self.boosterusage['Instruments'] = 0.01
+            self.booster['Instruments'] = 1
+            self.boosterbonus['Instruments'] = 1.5
             self.startingprice = 0.5
 
 
@@ -132,12 +177,18 @@ class Factory:
             self.sell['Fertilizer'] = 0
             self.effectiveness['Fertilizer'] = 10
             self.bonuses['Fertilizer'] = 0
+            self.boosterusage['Instruments'] = 0.01
+            self.booster['Instruments'] = 1
+            self.boosterbonus['Instruments'] = 1.5
             self.startingprice = 0.3
 
         if self.good.name == 'Whool':
             self.sell['Whool'] = 0
             self.effectiveness['Whool'] = 3
             self.bonuses['Whool'] = 0
+            self.boosterusage['Instruments'] = 0.01
+            self.booster['Instruments'] = 1
+            self.boosterbonus['Instruments'] = 1.5
             self.startingprice = 2
 
         if self.good.name == 'Fabric':
@@ -145,14 +196,42 @@ class Factory:
             self.effectiveness['Fabric'] = 1
             self.bonuses['Fabric'] = 0
             self.usage['Whool'] = 2
-            self.usage['Fertilizer'] = 1
+            self.usage['Instruments'] = 0.01
+            self.buy['Instruments'] = 10
             self.startingprice = 5
 
         if self.good.name == 'Iron':
             self.sell['Iron'] = 0
-            self.effectiveness['Iron'] = 10
+            self.effectiveness['Iron'] = 1
             self.bonuses['Iron'] = 0
+            self.usage['Instruments'] = 0.01
+            self.buy['Instruments'] = 10
             self.startingprice = 0.5
+        
+        if self.good.name == 'Instruments':
+            self.sell['Instruments'] = 10
+            self.effectiveness['Instruments'] = 0.1
+            self.bonuses['Instruments'] = 0
+            self.usage['Iron'] = 1
+            self.buy['Iron'] = 10
+            self.startingprice = 5
+        
+
+        if self.work_type.name == 'Enterpreneur':
+            self.sell['Instruments'] = 0
+            self.effectiveness['Instruments'] = 1
+            self.bonuses['Instruments'] = 0
+            self.usage['Iron'] = 1
+            self.startingprice = 5
+        
+        if self.good.name == 'Wood':
+            self.sell['Wood'] = 0
+            self.effectiveness['Wood'] = 1
+            self.bonuses['Wood'] = 0
+            self.usage['Instruments'] = 0.01
+            self.buy['Instruments'] = 10
+            self.startingprice = 0.1
+
 
     def coef(self):
         """высчитываем коэффициент для распределения попов на работу"""
@@ -286,13 +365,49 @@ class Factory:
                         Factory.leavework(self, leaving)
                     self.unpaid = 1 - koefic / self.num_workers
         elif not self.type:
-            if self.money >= self.num_workers * self.gehalt:
-                self.money -= self.num_workers * self.gehalt
-                self.workers_money += self.num_workers * self.gehalt
-                # for j in self.workers_dict:
-                #     j.money += j.num * self.gehalt
+            if not isinstance(self.resource_map,list):
+                if self.money >= self.num_workers * self.gehalt:
+                    self.money -= self.num_workers * self.gehalt
+                    self.workers_money += self.num_workers * self.gehalt
+                    # for j in self.workers_dict:
+                    #     j.money += j.num * self.gehalt
+                    for key in self.sell:
+                        whatisdone[key] = self.num_workers * self.effectiveness[key] * (1 + self.bonuses[key])
+                    for key in self.booster:
+                        if self.booster[key] >= self.num_workers * self.boosterusage[key]:
+                            self.booster[key] -= self.num_workers * self.boosterusage[key]
+                            for key1 in self.sell:
+                                whatisdone[key1] *= self.boosterbonus[key]
+                    for key1 in self.sell:
+                        self.sell[key1] += whatisdone[key1]
+    
+                else:
+                    if self.money > 0:
+                        for key in self.sell:
+                            whatisdone[key] = self.effectiveness[key] * (1 + self.bonuses[key]) * self.money/self.gehalt
+                        for key in self.booster:
+                            if self.booster[key] >= self.boosterusage[key] * self.money/self.gehalt:
+                                self.booster[key] -= self.boosterusage[key] * self.money/self.gehalt
+                                for key1 in self.sell:
+                                    whatisdone[key1] *= self.boosterbonus[key]
+                        for key1 in self.sell:
+                            self.sell[key1] += whatisdone[key1]
+    
+                        # for j in self.workers_dict:
+                        #     j.money += self.money * j.num / self.num_workers
+                        self.workers_money += self.money
+                        self.money -= self.money
+                        leaving = min(self.unpaid,
+                                      1 - (self.money/self.gehalt) / self.num_workers)  # если какая-то часть населения дважды не уплочена, то она частично уволится
+                        if leaving != 0:
+                            Factory.leavework(self, leaving)
+                        self.unpaid = 1 - (self.money/self.gehalt) / self.num_workers
+            else:
                 for key in self.sell:
-                    whatisdone[key] = self.num_workers * self.effectiveness[key] * (1 + self.bonuses[key])
+                    whatisdone[key] = 0
+                for key in self.sell:
+                    for coord in self.sources:
+                        whatisdone[key] += self.resource_map[coord] * self.effectiveness[key] * (1 + self.bonuses[key])
                 for key in self.booster:
                     if self.booster[key] >= self.num_workers * self.boosterusage[key]:
                         self.booster[key] -= self.num_workers * self.boosterusage[key]
@@ -300,28 +415,7 @@ class Factory:
                             whatisdone[key1] *= self.boosterbonus[key]
                 for key1 in self.sell:
                     self.sell[key1] += whatisdone[key1]
-
-            else:
-                if self.money > 0:
-                    for key in self.sell:
-                        whatisdone[key] = self.effectiveness[key] * (1 + self.bonuses[key]) * self.money/self.gehalt
-                    for key in self.booster:
-                        if self.booster[key] >= self.boosterusage[key] * self.money/self.gehalt:
-                            self.booster[key] -= self.boosterusage[key] * self.money/self.gehalt
-                            for key1 in self.sell:
-                                whatisdone[key1] *= self.boosterbonus[key]
-                    for key1 in self.sell:
-                        self.sell[key1] += whatisdone[key1]
-
-                    # for j in self.workers_dict:
-                    #     j.money += self.money * j.num / self.num_workers
-                    self.workers_money += self.money
-                    self.money -= self.money
-                    leaving = min(self.unpaid,
-                                  1 - (self.money/self.gehalt) / self.num_workers)  # если какая-то часть населения дважды не уплочена, то она частично уволится
-                    if leaving != 0:
-                        Factory.leavework(self, leaving)
-                    self.unpaid = 1 - (self.money/self.gehalt) / self.num_workers
+                
 
         elif self.type and self.good.name != 'Grain':                 # это для крестьян. чтоб при отсутсутствии денег у завода, всё равно бы продолжалось производство зерна, ибо зерно крестьяне, а не завод делают
             for key in self.sell:
@@ -449,7 +543,7 @@ class Factory:
                     """
                     тут ввожу, есть ли смысл покупать бустер производства. проверка:
                      цена бустера < (множитель_бустера - 1) * сумма(эффективность_пр-ва_i-го_товара * (1 + бонус_i)) / траты_бустера_на_ед-цу_товара
-                     выкладки у меня на листике 
+                     выкладки у меня на листике
                     """
                     if pricedict[minpr] > (self.boosterbonus[i] - 1)* summa / self.boosterusage[i]:
                         break
@@ -545,18 +639,51 @@ class Factory:
         """
 
         for i in self.sell:
-            if self.after_creation[i] == 0:
-                continue
-            if 1 - self.sell[i]/self.after_creation[i] > 0.9:
-                self.good.prices[self] *= 1.1
-                self.price_changed[i] = 1
-            elif 1 - self.sell[i]/self.after_creation[i] < 0.5:
-                self.good.prices[self] /= 1.1
-                self.price_changed[i] = 2
+            if self.price_changed[i] == 0:
+                if self.after_creation[i] == 0:                         # проверка условия, что товар i вообще был создан
+                    continue
+                if 1 - self.sell[i]/self.after_creation[i] > 0.9:       # проверка условия, что продали бОльшую часть
+                    self.good.prices[self] *= 1.1
+                    self.price_changed[i] = 1
+                elif 1 - self.sell[i]/self.after_creation[i] < 0.5:
+                    self.good.prices[self] /= 1.1
+                    self.price_changed[i] = 2
+            else:
+                if self.soldprevious[i] == 0:
+                    continue
+                if self.price_changed[i] == 1:
+                    if (self.after_creation[i] - self.sell[i]) / self.soldprevious[i] > 1 / 1.1:
+                        self.good.prices[self] *= 1.1
+                        self.price_changed[i] = 1
+                        self.price_kept_changing[i] = 0
+                    else:
+                        self.good.prices[self] /= 1.1
+                        self.price_changed[i] = 2
+                        self.price_kept_changing[i] += 1
+                elif self.price_changed[i] == 2:
+                    if (self.after_creation[i] - self.sell[i]) / self.soldprevious[i] > 1.1:
+                        self.good.prices[self] /= 1.1
+                        self.price_changed[i] = 2
+                        self.price_kept_changing[i] = 0
+                    else:
+                        self.good.prices[self] *= 1.1
+                        self.price_changed[i] = 1
+                    self.price_kept_changing[i] += 1
+        for i in self.price_changed:
+            if self.price_kept_changing[i] == 5:
+                self.price_changed[i] = 0
         for i in self.sell:
             self.soldprevious[i] = self.after_creation[i] - self.sell[i]
+        for i in range(len(self.prices_history)-1):
+            self.prices_history[i] = self.prices_history[i+1]
+        self.prices_history[-1] = self.good.prices[self]
 
     def pricechangeagain(self):
+        """
+        ПОХОЖЕ ЧТО ЭТО ГОВНО УЖЕ НЕ НАДО. Я ЕГО ПЕРЕМЕСТИЛ В МЕТОД PRICECHANGE ВЫШЕ
+        
+        :return:
+        """
         """в зависимости от того, как изменилась цена в предыдущий раз, и как изменилась прибыль, либо продолжаем изменять
         цену в том же духе, либо наоборот"""
         for i in self.price_changed:
@@ -566,18 +693,29 @@ class Factory:
                  if (self.after_creation[i] - self.sell[i])/self.soldprevious[i] > 1/1.1:
                      self.good.prices[self] *= 1.1
                      self.price_changed[i] = 1
+                     self.price_kept_changing[i] = 0
                  else:
                      self.good.prices[self] /= 1.1
                      self.price_changed[i] = 2
+                     self.price_kept_changing[i] += 1
             elif self.price_changed[i] == 2:
                  if (self.after_creation[i] - self.sell[i])/self.soldprevious[i] > 1.1:
                      self.good.prices[self] /= 1.1
                      self.price_changed[i] = 2
+                     self.price_kept_changing[i] = 0
                  else:
                      self.good.prices[self] *= 1.1
                      self.price_changed[i] = 1
+                     self.price_kept_changing[i] += 1
         for i in self.sell:
             self.soldprevious[i] = self.after_creation[i] - self.sell[i]
+        for i in range(len(self.prices_history)-1):
+            self.prices_history[i] = self.prices_history[i+1]
+        self.prices_history[-1] = self.good.prices[self]
+        for i in self.price_changed:
+            if self.price_kept_changing[i] == 5:
+                self.price_changed[i] = 0
+
 
 
     def wage_change(self):
@@ -623,7 +761,7 @@ class Factory:
 
             for i in self.sell:
                 if i in obj.cons:
-                    if self.inventory[i] < darmoedy*1.5 * obj.cons[i] and self.sell[i] >= darmoedy*1.5 * obj.cons[i]:
+                    if self.inventory[i] < darmoedy*1.5 * obj.cons[i] and self.sell[i] > darmoedy*1.5 * obj.cons[i]:
                         self.inventory[i] += darmoedy*1.5 * obj.cons[i]
                         self.sell[i] -= darmoedy*1.5 * obj.cons[i]
 

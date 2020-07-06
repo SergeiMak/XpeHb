@@ -1,7 +1,9 @@
 import numpy as np
 import pygame as pg
 import pops
+import strata
 import random
+import factory
 #import state
 
 
@@ -11,7 +13,7 @@ class Settlement:
     slovar = dict()            # словарь всех городов мира
 
 
-    def __init__(self,state, coordinates, mm, name, serfs,schoolers, facnum = 0, size=1):
+    def __init__(self,state, coordinates, mm, name, facnum = 0, size=1):
         self.size = size           # размер города. город будет расти на карте мира. алгоритм уже придумал. руки просто не дошли написать
         mm[coordinates] = 2        # переписываем в координатах города биом основной карты, чтобы сменить биом на городской (и отрисовать это)
         self.area = []             # список с координатами точек города. нужно для его роста на карте
@@ -26,7 +28,7 @@ class Settlement:
         self.rectangle = pg.Rect((coordinates[0]-2,coordinates[1]-2),(5,5))            # прямоугольник города для глобальной карты
         self.factories = {}                # все заводы города
         self.facnum = facnum               # количество заводов в городе
-        self.serfs_unemployed = serfs      # безработные крестьяне. для каждого завода создаётся свой поп. в него перераспределяются ЭТИ попы, когда находят работу
+        #self.serfs_unemployed = serfs      # безработные крестьяне. для каждого завода создаётся свой поп. в него перераспределяются ЭТИ попы, когда находят работу
         #self.schoolers = pops.Pops(self,0,schoolers,1,0,1)
         self.pops = {}                     # словарь всех попов этого города
 
@@ -42,7 +44,13 @@ class Settlement:
         self.population = 0
         self.city = False
         self.state = state                         # принадлежность государству
-        state.settlements[self] = self             # записываем в словарь городов этого государства
+        state.settlements.append(self)             # записываем в словарь городов этого государства
+        
+
+        state.settlements_for_opt[state.last_added_settl_day - 1].append(self)
+        state.last_added_settl_day += 1
+        if state.last_added_settl_day == 8:
+            state.last_added_settl_day = 1
 
 
     def stlpopul(self):
@@ -51,13 +59,16 @@ class Settlement:
         for i in self.pops:
             self.population += i.total_num
 
-    def summakubow(self, pop1):
+    def summakubow(self):
         """подсчёт нормировки для распределения по заводам безработных. распределяются в соответствии с кубами зарплат"""
         sumcube = 0
+        for strata1 in self.state.strats:
+            for w in self.factories:
+                if w.work_type.name == strata1.name:
+                    sumcube += self.factories[w].gehalt*self.factories[w].gehalt*self.factories[w].gehalt * self.factories[w].notfull
+            self.gehsum[strata1.name] = sumcube
         for w in self.factories:
-            if w.work_type == pop1.strata:
-                sumcube += self.factories[w].gehalt*self.factories[w].gehalt*self.factories[w].gehalt * self.factories[w].notfull
-        self.gehsum[pop1.strata.name] = sumcube
+            factory.Factory.coef(w)
 
     def if_not_full(self):
         for i in self.factories:
