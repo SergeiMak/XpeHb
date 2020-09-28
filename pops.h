@@ -1,30 +1,34 @@
-#pragma once
-
 #ifndef POPS_H
 #define POPS_H
-#include "settlement.h"
 #include <vector>
-
-#include <iostream>
-#include <cstdlib> // ‰Îˇ system
+#include <string>
+#include <cstdlib> // –¥–ª—è system
 using namespace std;
+#include "settlement.h"
+#include "culture.h"
+#include "religion.h"
+#include "strata.h"
+#include "state.h"
 
-class Pops {
+class Settlement;
+
+class Pops
+{
+private:
+    Settlement &location;
+    vector<int> male_age;
+    vector<int> female_age;
 public:
-	Settlement location;
-	vector<int> male_population;
-	vector<int> female_population;
-	int total_population;
-	
-	Pops(Settlement pop_location, vector<int> male_population1, vector<int> female_population1);
+    Pops(Settlement &pop_location, Culture &cult, Religion &rel, Strata &strat);
+    Culture pop_culture;
+    Religion pop_religion;
+    Strata pop_strata;
 
-
-	void set_location(Settlement pop_location);
-	void recalculate_population(vector<int> vec_pop, int i);
-	void pop_change();
-	// vector<int> male_population1 = this.male_population, vector<int> female_population1 = female_population
-
+    int total_population;
+    //Pops();
+    void popchange();
+    void recalculate_population(vector<int> &vec_pop, int i);
 
 };
 
-#endif
+#endif // POPS_H

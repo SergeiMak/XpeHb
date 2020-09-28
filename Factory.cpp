@@ -1,7 +1,6 @@
-#include "Factory.h"
+#include "factory.h"
 
-
-void Factory::set_location(char city_name)
+Factory::Factory(Settlement &fac_location):location(fac_location)
 {
-    // TODO: Добавьте сюда код реализации.
+
 }

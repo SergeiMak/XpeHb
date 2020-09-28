@@ -1,81 +1,78 @@
 #include <iostream>
-#include <cstdlib> // ‰Îˇ system
-#include "pops.h"
+#include <cstdlib> // –¥–ª—è syste
 #include <math.h>
 #include <numeric>
 #include <vector>
+#include "pops.h"
+#include "settlement.h"
 
 using namespace std;
 
-
-Pops::Pops(Settlement pop_location, vector<int> male_population1, vector<int> female_population1) {
-
-	location = pop_location;
-	male_population = male_population1;
-	female_population = female_population1;
-
-
-
-
-
-}
-
-void Pops::set_location(Settlement pop_location)
+Pops::Pops(Settlement &pop_location, Culture &cult,Religion &rel,Strata &strat):location(pop_location), pop_culture(cult), pop_religion(rel), pop_strata(strat)
 {
-	location = pop_location;
+    //location = pop_location;
+    for(int count = 0; count < 75; ++count){
+        male_age.push_back(0);
+        female_age.push_back(0);
+    }
+    male_age[20] = 100;
+    female_age[20]=100;
+    location.add_pop(*this);
+    for(int count = 0; count < male_age.size();count++){
+        cout<<male_age[count]<<endl;
+    }
 }
 
+void Pops::popchange(){
+    int i;
+    float birth_rate = 0.1;
+    for (i = 0; i < male_age.size(); i++) {
+        recalculate_population(male_age, i);
+        recalculate_population(female_age, i);
+    }
+    int fertile_men;
+    int fertile_women;
+    fertile_men = accumulate(male_age.begin() + 14, male_age.end(), 0);
+    fertile_women = accumulate(female_age.begin() + 14, female_age.begin() + 44, 0);
 
-void Pops::pop_change() {
-	int i;
-	float birth_rate = 0.1;
-	for (i = 0; i <= male_population.size(); i++) {
-		recalculate_population(male_population, i);
-		recalculate_population(female_population, i);
-	}
-	int fertile_men;
-	int fertile_women;
-	fertile_men = accumulate(male_population.begin() + 14, male_population.end(), 0);
-	fertile_women = accumulate(female_population.begin() + 14, female_population.begin() + 44, 0);
+    if (fertile_men <= fertile_women) {
 
-	if (fertile_men <= fertile_women) {
-
-		male_population[0] = fertile_men * birth_rate / 2;
-		female_population[0] = male_population[0];
+        male_age[0] = fertile_men * birth_rate / 2;
+        female_age[0] = male_age[0];
 
 
-	}
-	else {
-		male_population[0] = fertile_women * birth_rate / 2;
-		female_population[0] = male_population[0];
-	}
-	male_population[74] = 0;
-	female_population[74] = 0;
-
-	total_population = fertile_men = accumulate(female_population.begin(), female_population.end(), 0) + accumulate(male_population.begin(), male_population.end(), 0);
-	// »ÃœÀ≈Ã≈Õ“»–Œ¬¿“‹ œŒƒ—◊®“ –¿¡Œ◊»’
+    }
+    else {
+        male_age[0] = fertile_women * birth_rate / 2;
+        female_age[0] = male_age[0];
+    }
+    male_age[74] = 0;
+    male_age[74] = 0;
+    total_population = accumulate(female_age.begin(), female_age.end(), 0) + accumulate(male_age.begin(), male_age.end(), 0);
+    cout<<"Population of "<<pop_religion.name<<" is "<<total_population<<endl;
+    // –ò–ú–ü–õ–ï–ú–ï–ù–¢–ò–†–û–í–ê–¢–¨ –ü–û–î–°–ß–Å–¢ –†–ê–ë–û–ß–ò–• –ö–û–ì–î–ê –°–î–ï–õ–ê–Æ –ì–û–°–£–î–ê–†–°–¢–í–ê –ò –ó–ê–ö–û–ù–´
 }
 
-void Pops::recalculate_population(vector<int> vec_pop, int i) {
-	if (vec_pop[74 - (i-1)] <= 100) {
+void Pops::recalculate_population(vector<int> &vec_pop, int i) {
+    if (vec_pop[74 - i-1] <= 100) {
 
-		// ÚÛÚ, Ì‡‚ÂÌÓÂ, ÏÓÊÌÓ Í‡Í-ÚÓ ÔÓ˘Â Ò‰ÂÎ‡Ú¸ Ï‡ÒÒË‚ ÒÎÛ˜‡ÈÌ˚ı ˜ËÒÂÎ, ÌÓ ˇ ıÁ Í‡Í
+        // —Ç—É—Ç, –Ω–∞–≤–µ—Ä–Ω–æ–µ, –º–æ–∂–Ω–æ –∫–∞–∫-—Ç–æ –ø—Ä–æ—â–µ —Å–¥–µ–ª–∞—Ç—å –º–∞—Å—Å–∏–≤ —Å–ª—É—á–∞–π–Ω—ã—Ö —á–∏—Å–µ–ª, –Ω–æ —è —Ö–∑ –∫–∞–∫
 
-		int deaths = 0;
-		for (int j = 1; j < vec_pop[74 - (i - 1)]; j++) {
-			if (rand() % 101 < ((1 / ((74 - (i + 1)) + 0.5)) + pow(((74 - (i + 1)) / 50 - 0.2), 5)) * 10) {
-				deaths++;
-			}
-		}
-		vec_pop[74 - (i)] = vec_pop[74 - (i - 1)] - deaths;
-	}
-	else {
-		int deaths = 0;
-		for (int j = 1; j < 100; j++) {
-			if (rand() % 101 < ((1 / ((74 - (i + 1)) + 0.5)) + pow(((74 - (i + 1)) / 50 - 0.2), 5)) * 10) {
-				deaths++;
-			}
-		}
-		vec_pop[74 - (i)] = vec_pop[74 - (i - 1)] - (vec_pop[74 - (i - 1)]*deaths)/100;
-	}
+        int deaths = 0;
+        for (int j = 0; j < vec_pop[74 - i - 1]; j++) {
+            if (rand() % 101 < ((1 / ((74 - (i + 1)) + 0.5)) + pow(((74 - (i + 1)) / 50 - 0.2), 5)) * 10) {
+                deaths++;
+            }
+        }
+        vec_pop[74 - i] = vec_pop[74 - i - 1] - deaths;
+    }
+    else {
+        int deaths = 0;
+        for (int j = 0; j < 100; j++) {
+            if (rand() % 101 < ((1 / ((74 - (i + 1)) + 0.5)) + pow(((74 - (i + 1)) / 50 - 0.2), 5)) * 10) {
+                deaths++;
+            }
+        }
+        vec_pop[74 - i] = vec_pop[74 - i - 1] - (vec_pop[74 - i - 1]*deaths)/100;
+    }
 }
